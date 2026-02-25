@@ -41,9 +41,9 @@ through GitHub Issue comments and labels — no local state files.
 ```
 [GIT WATCHER] detects issue with status "Ready"
       ↓
-[INTAKE AGENT]  → posts comment, sets status: Intake
+[INTAKE AGENT]       → posts comment, sets status: Intake
       ↓
-[LEGAL AGENT]   → posts comment, creates branch, sets status: Architecture
+[EU COMPLIANCE AGENT] → posts legal memo, creates branch, sets status: Architecture
       ↓
 [ARCHITECT]     → posts comment, sets status: Solution Design
       ↓
@@ -79,16 +79,16 @@ Create these labels in the repo:
 
 ## Agent Rules (modular)
 Each agent has its own rules file:
-- `.claude/rules/git-watcher.md`     ← entry point, polls GitHub Project
+- `.claude/rules/git-watcher.md`       ← entry point, polls GitHub Project
 - `.claude/rules/intake.md`
-- `.claude/rules/legal.md`
+- `.claude/rules/eu-compliance.md`    ← EU regulatory review (replaces legal.md)
 - `.claude/rules/architect.md`
 - `.claude/rules/solution-design.md`
 - `.claude/rules/qa.md`
 - `.claude/rules/developer.md`
 - `.claude/rules/code-quality.md`
 - `.claude/rules/security.md`
-- `.claude/rules/git-agent.md`       ← final commit + PR
+- `.claude/rules/git-agent.md`         ← final commit + PR
 
 ## Universal Rules (all agents)
 - Source config: `source .claude/config.sh` before any `gh` command

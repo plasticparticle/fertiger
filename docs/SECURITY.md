@@ -9,7 +9,9 @@
 
 _How authentication and authorisation work in this codebase._
 
-_(populated by agent)_
+All pipeline agents authenticate exclusively through the GitHub CLI (`gh`), which is
+pre-authenticated via the user's local gh session. No new auth flows are introduced
+by any pipeline agent. Agents do not store, log, or transmit credentials.
 
 ---
 
@@ -17,7 +19,10 @@ _(populated by agent)_
 
 _Patterns all developers must follow, extracted from past security reviews._
 
-_(populated by agent)_
+- All bash commands in agent rules files use environment variables from `config.sh`; no hardcoded values
+- Agent rules files must never contain secrets, API keys, or credentials
+- `config.sh` is gitignored and must never be committed
+- All `gh` commands use `--repo $GITHUB_REPO` to scope operations to the correct repository
 
 ---
 
@@ -27,7 +32,8 @@ _Areas of the codebase that warrant extra scrutiny on future changes._
 
 | Area | Risk | Mitigation in Place | Last Reviewed |
 |------|------|---------------------|---------------|
-| _(populated by agent)_ | | | |
+| Agent rules bash commands | Variable injection if $ISSUE_NUMBER contained special chars | gh CLI sanitises arguments; issue numbers are numeric only | 2026-02-26 |
+| COMPLIANCE.md register | Append-only; risk of sensitive data if issue body contains PII | COMPLIANCE.md records software feature decisions, not personal data | 2026-02-26 |
 
 ---
 
@@ -37,8 +43,4 @@ _One row per issue processed. Most recent first._
 
 | Issue | Feature | Result | Critical | High | Medium | Low | Date |
 |-------|---------|--------|----------|------|--------|-----|------|
-| _(populated by agent)_ | | | | | | | |
-
----
-
-_No security audits recorded yet._
+| #1 | EU Compliance Agent — Requirements | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |
