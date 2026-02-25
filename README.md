@@ -69,7 +69,7 @@ All agent output lives as structured comments on your GitHub Issue, creating a p
 ## Prerequisites
 
 - [Claude Code](https://claude.ai/code) installed and authenticated
-- [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated
+- [GitHub CLI](https://cli.github.com/) (`gh`) installed — see Step 1 below
 - A GitHub repository (the pipeline configures the Project board for you)
 - Node.js + npm project (adapt commands for other runtimes)
 
@@ -77,9 +77,66 @@ All agent output lives as structured comments on your GitHub Issue, creating a p
 
 ## Setup
 
-Setup takes three commands. The third one does all the work.
+### Step 1 — Authenticate GitHub CLI
 
-### Step 1 — Copy the pipeline files into your project
+If you have never used `gh` before, install it and log in:
+
+```bash
+# macOS
+brew install gh
+
+# Linux (Debian/Ubuntu)
+sudo apt install gh
+
+# Windows
+winget install GitHub.cli
+```
+
+Then authenticate:
+
+```bash
+gh auth login
+```
+
+The interactive prompt will ask:
+1. **Where do you use GitHub?** → `GitHub.com`
+2. **Preferred protocol?** → `HTTPS` (recommended)
+3. **Authenticate with browser?** → `Yes` — it opens github.com, you approve
+
+Once complete, verify:
+
+```bash
+gh auth status
+# Should show: Logged in to github.com as <your-username>
+```
+
+**If you are already logged in**, skip to the next step.
+
+---
+
+### Step 2 — Add the `project` OAuth scope
+
+The standard `gh auth login` does **not** include the `project` scope, which the
+pipeline needs to update your GitHub Project board. Add it now:
+
+```bash
+gh auth refresh -s project
+```
+
+This opens a browser window asking you to approve the additional scope. After
+approving, verify it was added:
+
+```bash
+gh auth status
+# Look for 'project' in the token scopes line, e.g.:
+# Token scopes: 'gist', 'read:org', 'repo', 'project'
+```
+
+If `project` is not listed, re-run `gh auth refresh -s project`.
+
+---
+
+### Step 3 — Copy the pipeline files into your project
 
 ```bash
 cp -r fertiger/.claude your-project/.claude
@@ -89,20 +146,7 @@ cp fertiger/FEATURE-REQUEST.md your-project/FEATURE-REQUEST.md
 
 Or use fertiger as a GitHub template repository.
 
-### Step 2 — Add the `project` OAuth scope to GitHub CLI
-
-This scope is not included in `gh auth login` by default but is required for
-updating the Project board:
-
-```bash
-gh auth refresh -s project
-
-# Verify
-gh auth status
-# Must show 'project' in token scopes
-```
-
-### Step 3 — Run the Setup Agent
+### Step 4 — Run the Setup Agent
 
 From inside your project directory:
 
