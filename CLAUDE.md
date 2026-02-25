@@ -98,6 +98,10 @@ Each agent has its own rules file:
 - Never post duplicate comments — check if your section already exists
 - If blocked: add label `pipeline:blocked`, post a BLOCKED comment explaining why
 - Use `gh issue comment $ISSUE_NUMBER --body "..."` for all communication
+- **jq + HTML comments:** Never use `contains("<!--")` in jq — the `!` causes a `\!` escape error. Use `test("pipeline-agent:")` instead:
+  ```bash
+  jq '[.comments[].body | test("pipeline-agent:")] | any'
+  ```
 
 ## Human-in-the-Loop Checkpoints
 1. **Intake clarifications** — Intake agent posts questions as a comment,

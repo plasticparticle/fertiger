@@ -42,15 +42,20 @@ APPROVED_ISSUES=$(echo "$POLL_RESULT" | jq '.approved')
 
 For each issue found, check it hasn't already been processed:
 ```bash
-# Get existing comments to see if pipeline already started
-gh issue view $ISSUE_NUMBER \
+# Check for existing pipeline comments — use test() not contains() to avoid jq \! escape bug
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --comments \
-  --json comments,labels,body
+  --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:")] | any')
+
+if [ "$ALREADY_STARTED" = "true" ]; then
+  echo "Issue #$ISSUE_NUMBER already in pipeline — skipping"
+  continue
+fi
 ```
 
-If a comment from the pipeline already exists (contains `<!-- pipeline-agent:`),
-skip this issue — it's already in progress.
+If a comment from the pipeline already exists, skip this issue — it's already in progress.
 
 ## Step 4: Claim the Issue
 
