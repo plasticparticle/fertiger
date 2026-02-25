@@ -19,7 +19,7 @@ gh issue view $ISSUE_NUMBER \
 
 Required agents in comments before proceeding:
 - `intake` ✅
-- `legal` ✅
+- `eu-compliance` ✅
 - `architect` ✅
 - `solution-design` ✅
 - `qa-tests` ✅
@@ -42,7 +42,7 @@ git diff main..HEAD --name-only | grep "^docs/"
 
 Expected files (depending on what the feature touched):
 - `docs/ARCHITECTURE.md` — always expected (Architect Agent)
-- `docs/COMPLIANCE.md` — always expected (Legal Agent)
+- `docs/COMPLIANCE.md` — always expected (EU Compliance Agent)
 - `docs/SECURITY.md` — always expected (Security Agent)
 
 If any are missing, the relevant agent failed to update them. Post a warning comment but
@@ -76,7 +76,7 @@ $(extract acceptance criteria from intake comment as numbered steps)
 | Agent | Result |
 |-------|--------|
 | Intake | ✅ |
-| Legal/GDPR | ✅ |
+| EU Compliance/GDPR | ✅ |
 | Architecture | ✅ |
 | Solution Design | ✅ |
 | QA Tests | ✅ [N tests] |
@@ -86,7 +86,7 @@ $(extract acceptance criteria from intake comment as numbered steps)
 | Security | ✅ |
 
 ## Compliance
-See Legal Agent comment on #$ISSUE_NUMBER for GDPR assessment.
+See EU Compliance Agent comment on #$ISSUE_NUMBER for full regulatory assessment.
 
 ## References
 - Feature Issue: #$ISSUE_NUMBER
@@ -162,7 +162,7 @@ Closes #$ISSUE_NUMBER
 
 [Short description]
 
-Pipeline: intake → legal → architect → solution-design → qa → dev → qa-validate → quality → security
+Pipeline: intake → eu-compliance → architect → solution-design → qa → dev → qa-validate → quality → security
 ```
 
 ## Never

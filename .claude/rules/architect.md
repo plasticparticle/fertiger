@@ -7,8 +7,8 @@ as a GitHub Issue comment.
 
 ## Input
 Read comments containing:
-- `<!-- pipeline-agent:intake -->` — requirements
-- `<!-- pipeline-agent:legal -->` — branch name, compliance notes
+- `<!-- pipeline-agent:intake -->` — requirements and acceptance criteria
+- `<!-- pipeline-agent:eu-compliance -->` — branch name, verdict, and compliance constraints
 
 ## Step 1: Read Previous Agent Output
 ```bash
@@ -18,7 +18,11 @@ gh issue view $ISSUE_NUMBER \
   --comments \
   --json comments,title,body
 ```
-Extract: requirements list, acceptance criteria, branch name, any legal constraints.
+Extract: requirements list, acceptance criteria, branch name, and the
+`### Compliance Constraints for Architecture` block from the eu-compliance comment.
+These constraints (e.g. `DATA_RESIDENCY`, `ENCRYPTION_AT_REST`) must be reflected
+in architecture decisions — particularly in Azure region selection, storage choices,
+and data handling patterns.
 
 ## Step 2: Checkout the Feature Branch
 ```bash
