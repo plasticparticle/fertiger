@@ -1,0 +1,56 @@
+# ─── fertiger pipeline ────────────────────────────────────────────────────────
+# Contains project-specific GitHub IDs and handles — never commit this
+.claude/config.sh
+
+# ─── Node.js / TypeScript ─────────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+
+# Dependency lock files — keep whichever your project uses, ignore the rest
+# (uncomment the ones you don't use)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ─── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ─── Test & coverage output ───────────────────────────────────────────────────
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# ─── Editor & OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
