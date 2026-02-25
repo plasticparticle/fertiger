@@ -1,2 +1,19 @@
-// settings.json
-{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(source *)",
+      "Bash(gh *)",
+      "Bash(git *)",
+      "Bash(npm run *)",
+      "Edit(/src/**)",
+      "Edit(/tests/**)"
+    ],
+    "deny": [
+      "Bash(git push --force)",
+      "Bash(gh auth *)"
+    ]
+  }
+}
