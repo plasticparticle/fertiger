@@ -5,9 +5,18 @@ Stops after 8 hours of no new issues.
 
 Before executing, read `.claude/rules/git-watcher.md` in full.
 
-Then run:
+Then start the watcher using the pre-built script:
 ```bash
 source .claude/config.sh
+bash .claude/scripts/watch.sh
 ```
 
-No issue number is required — the watcher polls the project board autonomously.
+The watch loop is fully defined in `.claude/scripts/watch.sh`.
+Do NOT reconstruct polling logic inline — use the script.
+
+To override timing (e.g. for quick testing):
+```bash
+POLL_INTERVAL=60 MAX_IDLE_SECONDS=300 bash .claude/scripts/watch.sh
+```
+
+No issue number is required — the watcher polls autonomously.
