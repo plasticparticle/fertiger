@@ -37,8 +37,4 @@ _One row per issue processed. Most recent first._
 
 | Issue | Feature | Result | DPIA Required | Notes | Date |
 |-------|---------|--------|---------------|-------|------|
-| _(populated by agent)_ | | | | | |
-
----
-
-_No compliance decisions recorded yet._
+| #1 | EU Compliance Agent — Requirements | COMPLIANT | NO | Developer tooling enhancement; no new personal data processing; positive privacy-by-design contribution (GDPR Art. 25) | 2026-02-26 |
