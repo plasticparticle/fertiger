@@ -4,24 +4,8 @@
   },
   "permissions": {
     "allow": [
-      "Bash(bash *)",
-      "Bash(source *)",
-      "Bash(gh *)",
-      "Bash(git *)",
-      "Bash(npm run *)",
-      "Bash(npx *)",
-      "Bash(echo *)",
-      "Bash(cat *)",
-      "Bash(jq *)",
-      "Bash(mkdir *)",
-      "Bash(grep *)",
-      "Bash(sed *)",
-      "Bash(tr *)",
-      "Bash(cut *)",
-      "Bash(date *)",
-      "Edit(/src/**)",
-      "Edit(/tests/**)",
-      "Edit(/docs/**)"
+      "Bash(*)",
+      "Edit(*)"
     ],
     "deny": [
       "Bash(git push --force)",
