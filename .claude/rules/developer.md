@@ -12,6 +12,28 @@ The team lead spawns you with a specific file assignment.
 
 ---
 
+## Step 0: Announce Your Start
+
+Before doing anything else, post a comment so the issue shows who picked up which files:
+
+```bash
+source .claude/config.sh
+
+gh issue comment $ISSUE_NUMBER \
+  --repo $GITHUB_REPO \
+  --body "<!-- pipeline-agent:dev-$AGENT_NAME-start -->
+## 💻 Dev Agent ($AGENT_NAME) — Starting
+
+**Assigned area:** [brief description, e.g. \"Core pipeline scripts\"]
+
+**Files I will implement:**
+[list your assigned files, one per line with - prefix]
+
+**Branch:** \`$BRANCH_NAME\`"
+```
+
+---
+
 ## Step 1: Orient — Load Context
 
 ```bash
