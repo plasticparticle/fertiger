@@ -114,6 +114,15 @@ _cmd_claim() {
   # Remove any existing claim by this agent (idempotent)
   local new_body
   new_body=$(echo "$current_body" | grep -v "CLAIMED by $agent_name:" || true)
+
+  # Also remove stale entries for each specific file being claimed.
+  # "Most recent claim wins" — this ensures exclusive file ownership and
+  # prevents stale entries from previous runs from shadowing the current claim.
+  local f
+  for f in $files; do
+    new_body=$(printf '%s\n' "$new_body" | grep -v "CLAIMED by [^:]*:.*${f}" || true)
+  done
+
   new_body="$new_body
 $entry"
 
