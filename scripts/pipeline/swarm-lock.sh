@@ -33,7 +33,10 @@ if [ -z "${GITHUB_REPO:-}" ]; then
   exit 1
 fi
 
-LOCK_MARKER="swarm-lock"
+LOCK_MARKER="<!-- swarm-lock -->"
+# Unique pattern for jq: the lock comment body starts with this exact HTML comment
+# Use startswith to avoid matching other comments that merely mention "swarm-lock"
+LOCK_MARKER_PREFIX="<!-- swarm-lock"
 
 # --- Helper: fetch current lock comment from GitHub Issue ---
 # Returns: JSON of the comment or empty string if none found
@@ -44,8 +47,9 @@ _get_lock_comment() {
     return 1
   }
 
-  # Find the comment containing the swarm-lock marker
-  echo "$comments_json" | jq -c "[.[] | select(.body | test(\"$LOCK_MARKER\"))] | last // empty" 2>/dev/null
+  # Find the comment whose body starts with "<!-- swarm-lock" — this uniquely identifies
+  # the lock comment vs other comments that mention "swarm-lock" in their text
+  echo "$comments_json" | jq -c "[.[] | select(.body | startswith(\"$LOCK_MARKER_PREFIX\"))] | last // empty" 2>/dev/null
 }
 
 # --- Helper: get comment ID from lock comment JSON ---
@@ -97,7 +101,7 @@ _cmd_claim() {
     current_body=$(_get_comment_body "$lock_comment")
   else
     comment_id=""
-    current_body="<!-- $LOCK_MARKER -->
+    current_body="$LOCK_MARKER
 ## Swarm Lock State
 
 "
