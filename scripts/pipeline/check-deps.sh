@@ -72,28 +72,51 @@ _resolve_js_import() {
         return 0
       fi
     done
-    # Return without extension -- will show as MISSING if not found
-    echo "$resolved"
+    # Return with .ts extension as best guess -- shows as MISSING if not found
+    echo "${resolved}.ts"
   fi
 }
 
 # Resolve a Python import to a filesystem path
+# Searches upward from the source file's directory to find the project root
 _resolve_python_import() {
   local module="$1"
   local source_file="$2"
   local source_dir
   source_dir="$(dirname "$source_file")"
 
-  # Find the project root (directory containing the source file's package root)
-  # Heuristic: walk up from source_dir until no __init__.py found
-  local project_root="$source_dir"
-  while [ -f "$project_root/__init__.py" ]; do
-    project_root="$(dirname "$project_root")"
-  done
-
   # Convert module path to file path: app.models.user -> app/models/user.py
   local file_path
   file_path=$(echo "$module" | sed 's/\./\//g')
+
+  # Get first component of the module path to find project root
+  local first_component
+  first_component=$(echo "$file_path" | cut -d'/' -f1)
+
+  # Search upward from source_dir for the directory containing first_component
+  local search_dir="$source_dir"
+  local found_root=""
+  local max_levels=10
+  local level=0
+
+  while [ $level -lt $max_levels ]; do
+    # Check if first_component exists as a directory at this level
+    if [ -d "$search_dir/$first_component" ] || [ -f "$search_dir/$first_component.py" ]; then
+      found_root="$search_dir"
+      break
+    fi
+    # Check if we're already at root
+    local parent
+    parent="$(dirname "$search_dir")"
+    if [ "$parent" = "$search_dir" ]; then
+      break
+    fi
+    search_dir="$parent"
+    level=$((level + 1))
+  done
+
+  # If we found a root, use it; otherwise fall back to source_dir
+  local project_root="${found_root:-$source_dir}"
 
   # Try as .py file
   local candidate="$project_root/$file_path.py"
@@ -122,9 +145,9 @@ _check_js_deps() {
   #   require('path')
   #   require("path")
   local imports
-  imports=$(grep -E "(import .+ from ['\"]|require\(['\"])" "$file" 2>/dev/null \
+  imports=$(grep -E "(import .+ from ['\"]|import ['\"]|require\(['\"])" "$file" 2>/dev/null \
     | sed "s/.*from ['\"\`]\([^'\"\`]*\)['\"\`].*/\1/; s/.*require(['\"\`]\([^'\"\`]*\)['\"\`]).*/\1/" \
-    | grep -E "^\.\.?/" \
+    | grep -E "^\.\." \
     || true)
 
   while IFS= read -r import_path; do
@@ -137,7 +160,7 @@ _check_js_deps() {
     if [ -f "$resolved" ]; then
       echo "OK: $resolved"
     else
-      echo "MISSING: $resolved (not yet on branch)"
+      echo "MISSING: $resolved"
     fi
   done <<EOF
 $imports
@@ -156,17 +179,15 @@ _check_python_deps() {
   local imports
   imports=$(grep -E "^(import |from )" "$file" 2>/dev/null \
     | sed 's/^import \([a-zA-Z0-9_.]*\).*/\1/; s/^from \([a-zA-Z0-9_.]*\) import.*/\1/' \
-    | grep -v "^[A-Z]" \
     || true)
 
   while IFS= read -r module; do
     [ -z "$module" ] && continue
 
-    # Skip stdlib and common third-party (single word, no dots)
-    case "$module" in
-      os|sys|re|json|datetime|pathlib|typing|collections|functools|itertools|abc) continue ;;
-      builtins|io|math|random|string|time|hashlib|base64|urllib|http|email) continue ;;
-    esac
+    # Skip single-word stdlib modules (no dots in name means stdlib or simple import)
+    if ! echo "$module" | grep -q '\.'; then
+      continue
+    fi
 
     local resolved
     resolved=$(_resolve_python_import "$module" "$file")
@@ -175,7 +196,7 @@ _check_python_deps() {
     if [ -f "$resolved" ]; then
       echo "OK: $resolved"
     else
-      echo "MISSING: $resolved (not yet on branch)"
+      echo "MISSING: $resolved"
     fi
   done <<EOF
 $imports
@@ -185,6 +206,8 @@ EOF
 # Parse Go imports from a file
 _check_go_deps() {
   local file="$1"
+  local file_dir
+  file_dir="$(dirname "$file")"
 
   # Extract from single-line and block imports
   # Single: import "path/to/pkg"
@@ -197,28 +220,32 @@ _check_go_deps() {
     /^import "/ { gsub(/^import "/, ""); gsub(/"$/, ""); print }
   ' "$file" 2>/dev/null || true)
 
-  local project_root="."
-
   while IFS= read -r import_path; do
     [ -z "$import_path" ] && continue
 
-    # Skip standard library (no domain in path)
-    if ! echo "$import_path" | grep -q "\."; then
+    # Skip standard library (no domain in path — stdlib paths have no dots or slashes at start)
+    if ! echo "$import_path" | grep -q '\.'; then
       continue
     fi
 
     # For project-local imports, try to resolve to a local directory
-    # This is a best-effort check -- Go imports often reference the module path
+    # This is a best-effort check -- Go imports reference the module path
     local last_component
     last_component=$(echo "$import_path" | sed 's|.*/||')
-    local local_path="$project_root/$last_component"
 
-    if [ -d "$local_path" ]; then
-      echo "OK: $local_path"
+    # Try to find a directory matching the last component of the import path
+    if find "$file_dir" -type d -name "$last_component" 2>/dev/null | grep -q .; then
+      local found_dir
+      found_dir=$(find "$file_dir" -type d -name "$last_component" 2>/dev/null | head -1)
+      echo "OK: $found_dir"
     else
-      # Check if any .go file exists with this package name
-      if find . -name "*.go" -path "*/$last_component/*.go" 2>/dev/null | grep -q .; then
-        echo "OK: (package $last_component found)"
+      # Try searching from repo root as well
+      local repo_root
+      repo_root="$(cd "$file_dir" && git rev-parse --show-toplevel 2>/dev/null || echo ".")"
+      if find "$repo_root" -type d -name "$last_component" 2>/dev/null | grep -q .; then
+        local found_dir2
+        found_dir2=$(find "$repo_root" -type d -name "$last_component" 2>/dev/null | head -1)
+        echo "OK: $found_dir2"
       else
         echo "MISSING: $import_path (package not found locally)"
       fi
@@ -234,7 +261,7 @@ _check_other_deps() {
 
   # Look for lines that look like imports/includes/requires
   local imports
-  imports=$(grep -E "^(#include|require|use|import|from|source)" "$file" 2>/dev/null \
+  imports=$(grep -E "^(#include|require|use |import |from |source )" "$file" 2>/dev/null \
     | grep -v "^#" \
     || true)
 

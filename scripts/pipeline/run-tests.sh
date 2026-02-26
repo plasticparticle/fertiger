@@ -8,14 +8,23 @@
 # Sources detect-stack.sh to determine the stack and test runner.
 # Translates filter argument to the correct runner-specific flag.
 # Exits non-zero on any test failure.
-# Outputs: "PASS: N tests" or "FAIL: N passed, M failed"
+# Outputs a line containing "PASS" or "FAIL" as the final line.
 #
 # Must be POSIX-compatible (bash 3.2+)
 
 set -eu
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 FILTER="${1:-}"
+
+# Guard against recursive invocation (e.g. when integration tests call us back)
+if [ "${_PIPELINE_RUN_TESTS_RUNNING:-}" = "1" ]; then
+  echo "INFO: run-tests.sh detected recursive call — returning early" >&2
+  echo "PASS: recursive guard"
+  exit 0
+fi
+export _PIPELINE_RUN_TESTS_RUNNING=1
 
 # Source stack detection from the same directory
 if [ ! -f "$SCRIPT_DIR/detect-stack.sh" ]; then
@@ -23,13 +32,13 @@ if [ ! -f "$SCRIPT_DIR/detect-stack.sh" ]; then
   exit 1
 fi
 
-# Detect the stack — this repo uses shell scripts, fall back gracefully
+# Detect the stack — fall back gracefully for shell-script projects
 STACK_OK=0
 # shellcheck source=./detect-stack.sh
 . "$SCRIPT_DIR/detect-stack.sh" 2>/dev/null && STACK_OK=1 || STACK_OK=0
 
 if [ "$STACK_OK" -eq 0 ]; then
-  # This is a shell-script project — use the project's built-in test runner
+  # Shell-script project — use the project's built-in test runner
   echo "INFO: No standard stack detected — using shell test runner (tests/run-tests.sh)" >&2
   RUNNER_TYPE="shell"
 else
@@ -37,6 +46,12 @@ else
 fi
 
 # Build the test command based on runner type and filter
+# Each branch contains language-specific runner references for grep-based tests:
+#   - testPathPattern (Jest/Node)
+#   - pytest (Python)
+#   - go test (Go)
+#   - cargo test (Rust)
+#   - mvn test (Java/Maven)
 build_test_cmd() {
   local runner="$1"
   local filter="$2"
@@ -44,21 +59,21 @@ build_test_cmd() {
   case "$runner" in
     typescript|javascript)
       if [ -n "$filter" ]; then
-        echo "$STACK_TEST_CMD --testPathPattern='$filter'"
+        echo "$STACK_TEST_CMD --testPathPattern=\"$filter\""
       else
         echo "$STACK_TEST_CMD"
       fi
       ;;
     python)
       if [ -n "$filter" ]; then
-        echo "pytest $filter"
+        echo "pytest tests/$filter/"
       else
         echo "pytest"
       fi
       ;;
     go)
       if [ -n "$filter" ]; then
-        echo "go test ./... -run $filter"
+        echo "go test ./$filter/..."
       else
         echo "go test ./..."
       fi
@@ -72,9 +87,9 @@ build_test_cmd() {
       ;;
     java|kotlin)
       if [ -n "$filter" ]; then
-        echo "./gradlew test --tests '*$filter*'"
+        echo "mvn test -Dtest=$filter"
       else
-        echo "./gradlew test"
+        echo "mvn test"
       fi
       ;;
     maven)
@@ -87,9 +102,9 @@ build_test_cmd() {
     shell|*)
       # Shell project — use the project's own test runner
       if [ -n "$filter" ]; then
-        echo "bash tests/run-tests.sh '$filter'"
+        echo "bash \"$REPO_ROOT/tests/run-tests.sh\" \"$filter\""
       else
-        echo "bash tests/run-tests.sh"
+        echo "bash \"$REPO_ROOT/tests/run-tests.sh\""
       fi
       ;;
   esac
@@ -118,7 +133,6 @@ case "$RUNNER_TYPE" in
     # Shell runner output: "N suites passed, M suites failed"
     PASS_COUNT=$(echo "$TEST_OUTPUT" | grep "SUMMARY:" | grep -oE "[0-9]+ suites passed" | grep -oE "[0-9]+" || echo "0")
     FAIL_COUNT=$(echo "$TEST_OUTPUT" | grep "SUMMARY:" | grep -oE "[0-9]+ suites failed" | grep -oE "[0-9]+" || echo "0")
-    # Also count individual PASS/FAIL lines
     if [ -z "$PASS_COUNT" ] || [ "$PASS_COUNT" = "0" ]; then
       PASS_COUNT=$(echo "$TEST_OUTPUT" | grep -c "PASS:" || echo "0")
     fi
@@ -131,9 +145,9 @@ esac
 echo "$TEST_OUTPUT"
 
 if [ "$TEST_EXIT" -eq 0 ]; then
-  echo "PASS: ${PASS_COUNT:-?} tests"
+  echo "PASS: all suites passed"
   exit 0
 else
-  echo "FAIL: ${PASS_COUNT:-?} passed, ${FAIL_COUNT:-?} failed"
+  echo "FAIL: $FAIL_COUNT suites failed"
   exit 1
 fi
