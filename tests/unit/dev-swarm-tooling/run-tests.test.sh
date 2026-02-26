@@ -102,8 +102,10 @@ cat > "$FAIL_DIR/package.json" <<'PKGJSON'
 PKGJSON
 
 # The script should exit non-zero when tests fail
+# Unset the recursion guard — it may be inherited from the outer run-tests.sh
+# invocation when this test runs as part of the full test suite.
 FAIL_EXIT=0
-bash -c "cd '$FAIL_DIR' && '$REPO_ROOT/$SCRIPT'" 2>/dev/null || FAIL_EXIT=$?
+bash -c "unset _PIPELINE_RUN_TESTS_RUNNING; cd '$FAIL_DIR' && '$REPO_ROOT/$SCRIPT'" 2>/dev/null || FAIL_EXIT=$?
 if [ "$FAIL_EXIT" -ne 0 ]; then
   echo "  PASS: run-tests.sh exits non-zero when tests fail"
   PASS=$((PASS + 1))
