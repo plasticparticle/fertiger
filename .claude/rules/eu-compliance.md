@@ -12,6 +12,23 @@ Issue has a comment from the Intake Agent (`<!-- pipeline-agent:intake -->`).
 
 ---
 
+## Step 0: Triage Check
+
+```bash
+source .claude/config.sh
+# Determine analysis depth before starting expensive regulatory review
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+# Override: pipeline:full-review label forces full analysis
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+```
+
+**Fast path (TRIVIAL):** Skip deep regulatory triage — post a brief note that no regulated-data concerns were detected and proceed to Architecture without full 16-regulation assessment.
+**Standard path (STANDARD):** Run standard GDPR and primary regulation checks — default for most features.
+**Full path (COMPLEX):** Complete analysis as documented below — all regulations, DPIA evaluation, AI Act classification.
+
+---
+
 ## Step 1: Read Context
 
 ```bash
@@ -201,6 +218,8 @@ gh issue comment $ISSUE_NUMBER \
   --body "$(cat <<'EOF'
 <!-- pipeline-agent:eu-compliance -->
 ## ⚖️ EU Compliance Agent — Legal Memo
+
+**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
 
 ### Executive Summary
 [3 sentences maximum: what the feature does, key regulatory risk profile, overall verdict]

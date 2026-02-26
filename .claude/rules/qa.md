@@ -7,6 +7,28 @@ You are the QA Agent with two modes:
 
 ---
 
+## Step 0: Triage Check
+
+```bash
+source .claude/config.sh
+# Determine analysis depth before starting test authoring or validation
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+# Override: pipeline:full-review label forces full analysis
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+```
+
+**Fast path (TRIVIAL):** Write unit tests only — skip integration and regression suites. Fewer test files means fewer gh API calls and less pipeline overhead.
+**Standard path (STANDARD):** Write unit + integration tests — default for most features.
+**Full path (COMPLEX):** Write unit + integration + regression tests — complete test suite for high-risk or multi-file changes.
+
+_Test suite selection by triage level:_
+- TRIVIAL → unit tests only
+- STANDARD → unit + integration tests
+- COMPLEX → unit + integration + regression (full suite)
+
+---
+
 ## Mode 1: Test Author
 
 ### Trigger
@@ -60,6 +82,8 @@ gh issue comment $ISSUE_NUMBER \
   --body "$(cat <<'EOF'
 <!-- pipeline-agent:qa-tests -->
 ## 🧪 QA Agent — Test Suite Written
+
+**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
 
 ### Test Inventory
 | Type | File | AC Covered |

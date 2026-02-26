@@ -10,6 +10,21 @@ Read comments containing:
 - `<!-- pipeline-agent:intake -->` — requirements and acceptance criteria
 - `<!-- pipeline-agent:eu-compliance -->` — branch name, verdict, and compliance constraints
 
+## Step 0: Triage Check
+
+```bash
+source .claude/config.sh
+# Determine analysis depth before starting codebase exploration
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+# Override: pipeline:full-review label forces full analysis
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+```
+
+**Fast path (TRIVIAL):** Skip full codebase exploration — limit to directly affected files, post a focused ADR covering only the changed component.
+**Standard path (STANDARD):** Standard architecture review — check affected services, data model changes, API contracts.
+**Full path (COMPLEX):** Complete analysis as documented below — full codebase exploration, all ADR sections, risk and scalability assessment.
+
 ## Step 1: Read Previous Agent Output
 ```bash
 source .claude/config.sh
@@ -47,6 +62,8 @@ gh issue comment $ISSUE_NUMBER \
   --body "$(cat <<'EOF'
 <!-- pipeline-agent:architect -->
 ## 🏗️ Architect Agent — Architecture Decisions
+
+**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
 
 ### Affected Components
 | Component | Change Type | Notes |

@@ -34,6 +34,7 @@ _Areas of the codebase that warrant extra scrutiny on future changes._
 |------|------|---------------------|---------------|
 | Agent rules bash commands | Variable injection if $ISSUE_NUMBER contained special chars | gh CLI sanitises arguments; issue numbers are numeric only | 2026-02-26 |
 | COMPLIANCE.md register | Append-only; risk of sensitive data if issue body contains PII | COMPLIANCE.md records software feature decisions, not personal data | 2026-02-26 |
+| triage.sh keyword matching | Issue body content passed to grep; risk if body contains shell metacharacters | Content quoted via echo "$VAR" before pipe to grep; no eval used | 2026-02-26 |
 
 ---
 
@@ -43,4 +44,5 @@ _One row per issue processed. Most recent first._
 
 | Issue | Feature | Result | Critical | High | Medium | Low | Date |
 |-------|---------|--------|----------|------|--------|-----|------|
+| #4 | Pipeline Agents — Pre-Research Triage | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |
 | #1 | EU Compliance Agent — Requirements | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |

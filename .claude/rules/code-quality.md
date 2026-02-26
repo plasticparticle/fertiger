@@ -7,6 +7,21 @@ You do NOT change functionality — you improve maintainability.
 ## Trigger
 Issue project status is `Code Review`.
 
+## Step 0: Triage Check
+
+```bash
+source .claude/config.sh
+# Determine analysis depth before starting quality review
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+# Override: pipeline:full-review label forces full analysis
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+```
+
+**Fast path (TRIVIAL):** Skip automated lint/type-check — review changed files only for obvious violations. Post abbreviated quality comment.
+**Standard path (STANDARD):** Run lint and type-check, review changed files — default.
+**Full path (COMPLEX):** Complete automated checks plus full manual review checklist as documented below.
+
 ## Step 1: Checkout and Run Automated Checks
 ```bash
 source .claude/config.sh
@@ -30,6 +45,8 @@ gh issue comment $ISSUE_NUMBER \
   --body "$(cat <<'EOF'
 <!-- pipeline-agent:code-quality -->
 ## 🔬 Code Quality Agent — Review
+
+**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
 
 ### Automated Checks
 | Check | Result |
@@ -93,6 +110,21 @@ You review new code for cybersecurity vulnerabilities. Focus ONLY on the diff.
 ## Trigger
 Issue project status is `Security Review`.
 
+## Step 0: Triage Check
+
+```bash
+source .claude/config.sh
+# Determine analysis depth before starting security review
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+# Override: pipeline:full-review label forces full analysis
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+```
+
+**Fast path (TRIVIAL):** Run automated scans only — skip manual OWASP checklist review if no high-risk areas touched.
+**Standard path (STANDARD):** Automated scans plus targeted manual review of auth and data handling.
+**Full path (COMPLEX):** Complete security audit as documented below — all automated scans and full OWASP manual review.
+
 ## Step 1: Get the Diff and Read Security Context
 ```bash
 source .claude/config.sh
@@ -116,6 +148,8 @@ gh issue comment $ISSUE_NUMBER \
   --body "$(cat <<'EOF'
 <!-- pipeline-agent:security -->
 ## 🔒 Security Agent — Audit
+
+**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
 
 ### Automated Scan Results
 | Tool | Result | Findings |
