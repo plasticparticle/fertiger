@@ -16,16 +16,32 @@ The team lead spawns you with a specific file assignment.
 
 Before doing anything else, post a comment so the issue shows who picked up which files:
 
+```bash
+source .claude/config.sh
+
+gh issue comment $ISSUE_NUMBER \
+  --repo $GITHUB_REPO \
+  --body "<!-- pipeline-agent:dev-$AGENT_NAME-start -->
+## 💻 Dev Agent ($AGENT_NAME) — Starting
+
+**Assigned area:** [brief description, e.g. \"Core pipeline scripts\"]
+
+**Files I will implement:**
+[list your assigned files, one per line with - prefix]
+
+**Branch:** \`$BRANCH_NAME\`"
+```
+
+---
+
 ## Step 1: Orient — Load Context
 
 ```bash
 source .claude/config.sh
 
-# Read the full issue including all agent comments
-gh issue view $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --comments \
-  --json comments,title,body
+# Read only the pipeline agent comments needed for context
+gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[] | select(.body | test("pipeline-agent:(intake|eu-compliance|architect|solution-design|qa-tests)")) | .body]'
 ```
 
 Extract from comments:
@@ -72,6 +88,8 @@ other parallel agents:
 
 ```bash
 source .claude/config.sh
+# ISSUE_NUMBER is not exported by config.sh — set it explicitly:
+export ISSUE_NUMBER=<your-issue-number>
 
 # Claim your assigned files
 scripts/pipeline/swarm-lock.sh claim "$AGENT_NAME" "src/models/MyModel.ts src/services/MyService.ts"
@@ -222,8 +240,6 @@ gh issue comment $ISSUE_NUMBER \
 
 **Assigned area:** [description]
 
-**Assigned area:** [description]
-
 **Files implemented:**
 $(git diff main..HEAD --name-only | grep [your pattern] | sed 's/^/- /')
 
@@ -245,9 +261,8 @@ $TEST_OUTPUT
 Read the QA validation failure comment carefully:
 
 ```bash
-gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments \
-  --json comments \
-  | jq '[.comments[] | select(.body | test("pipeline-agent:qa-validation"))] | last'
+gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  --jq '[.comments[] | select(.body | test("pipeline-agent:qa-validation"))] | last.body'
 ```
 
 - Fix **only** what the failure report describes
@@ -284,9 +299,8 @@ posted `<!-- pipeline-agent:dev-[name] -->` with PASS status:
 
 ```bash
 # Verify all expected agents have reported in
-gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments \
-  --json comments \
-  | jq '[.comments[].body | select(test("pipeline-agent:dev-"))] | length'
+gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  --jq '[.comments[] | select(.body | test("pipeline-agent:dev-[^s]"))] | length'
 
 # Set status to QA Review
 gh project item-edit \
