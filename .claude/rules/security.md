@@ -8,6 +8,21 @@ and standards compliance.
 ## Trigger
 Feature file status is `QA_COMPLETE`.
 
+## Step 0: Triage Check
+
+```bash
+source .claude/config.sh
+# Determine analysis depth before starting quality review
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+# Override: pipeline:full-review label forces full analysis
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+```
+
+**Fast path (TRIVIAL):** Skip automated lint/type-check — review changed files only for obvious violations. Post abbreviated quality comment.
+**Standard path (STANDARD):** Run lint and type-check, review changed files — default.
+**Full path (COMPLEX):** Complete automated checks plus manual review checklist as documented below.
+
 ## Automated Checks (run first)
 ```bash
 npm run lint                    # ESLint
@@ -53,4 +68,10 @@ npx prettier --write src/
 ```
 
 ## Output Format
-Post output as a GitHub Issue comment using the templates in Steps 3 above.
+Post output as a GitHub Issue comment:
+
+```
+<!-- pipeline-agent:code-quality-review -->
+**Triage:** $TRIAGE_LEVEL — [reason]
+[Quality review results]
+```

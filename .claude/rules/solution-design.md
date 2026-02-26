@@ -8,6 +8,21 @@ step before human approval.
 ## Input
 Read all previous pipeline comments on the issue.
 
+## Step 0: Triage Check
+
+```bash
+source .claude/config.sh
+# Determine analysis depth before starting solution planning
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+# Override: pipeline:full-review label forces full analysis
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+```
+
+**Fast path (TRIVIAL):** Produce a simplified implementation plan — one or two phases, minimal file list, skip risk matrix.
+**Standard path (STANDARD):** Standard phased plan — data layer, service, API, tests as needed.
+**Full path (COMPLEX):** Complete phased implementation plan as documented below — all phases, full file list, risk matrix, complexity estimate.
+
 ## Step 1: Read All Previous Output
 ```bash
 source .claude/config.sh
@@ -25,6 +40,8 @@ gh issue comment $ISSUE_NUMBER \
   --body "$(cat <<'EOF'
 <!-- pipeline-agent:solution-design -->
 ## 📐 Solution Design Agent — Implementation Plan
+
+**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
 
 ### Solution Overview
 [2-3 sentences describing the chosen approach]
