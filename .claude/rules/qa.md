@@ -1,7 +1,7 @@
 # QA Agent Rules
 
 ## Role
-You are the QA Agent with two modes:
+Two modes:
 - **Mode 1 — Test Author:** Write tests before dev starts (TDD contract)
 - **Mode 2 — Validator:** Run tests and verify acceptance criteria after dev
 
@@ -11,101 +11,114 @@ You are the QA Agent with two modes:
 
 ```bash
 source .claude/config.sh
-# Determine analysis depth before starting test authoring or validation
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
-# Override: pipeline:full-review label forces full analysis
-HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
+HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels \
+  --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
 [ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
 ```
 
-**Fast path (TRIVIAL):** Write unit tests only — skip integration and regression suites. Fewer test files means fewer gh API calls and less pipeline overhead.
-**Standard path (STANDARD):** Write unit + integration tests — default for most features.
-**Full path (COMPLEX):** Write unit + integration + regression tests — complete test suite for high-risk or multi-file changes.
-
-_Test suite selection by triage level:_
-- TRIVIAL → unit tests only
-- STANDARD → unit + integration tests
-- COMPLEX → unit + integration + regression (full suite)
+Test suite by triage level:
+- **TRIVIAL** → unit tests only
+- **STANDARD** → unit + integration tests
+- **COMPLEX** → unit + integration + regression tests
 
 ---
 
 ## Mode 1: Test Author
 
 ### Trigger
-Issue has `pipeline:approved` label AND project status moves to `In Development`.
+Issue has `pipeline:approved` label AND project status is `In Development`.
 
-### Step 1: Read Requirements and Solution Design
+### Step 1: Fetch Only What You Need
+
+Do **not** fetch the entire comment thread. Pull only the two comments that matter:
+
 ```bash
 source .claude/config.sh
-gh issue view $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --comments \
-  --json comments,title,body
-```
-Extract: acceptance criteria (from intake comment), file list (from solution design comment).
 
-### Step 2: Checkout Feature Branch
-```bash
-git fetch origin
-git checkout $BRANCH_NAME
+# Get intake comment (acceptance criteria)
+gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments --json comments \
+  | jq '[.comments[] | select(.body | contains("pipeline-agent:intake"))] | last | .body'
+
+# Get solution design comment (file list)
+gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments --json comments \
+  | jq '[.comments[] | select(.body | contains("pipeline-agent:solution-design"))] | last | .body'
 ```
 
-### Step 3: Write Tests
-For each acceptance criterion, write at least one test.
-Tests should FAIL at this point — there is no implementation yet. That is correct.
+Extract: acceptance criteria list, affected file list.
+
+### Step 2: Study Existing Test Conventions
+
+Before writing a single test, read one existing test file to match project patterns (mocking style, assertion library, fixture approach, describe/it structure):
 
 ```bash
-# Create test directory structure
+git fetch origin && git checkout $BRANCH_NAME
+
+# Find an existing test file to use as a style reference
+find tests/ -name "*.test.*" -type f | head -1 | xargs cat
+```
+
+### Step 3: Create Test Structure
+
+```bash
 mkdir -p tests/unit/$FEATURE_SLUG
-mkdir -p tests/integration/$FEATURE_SLUG
-mkdir -p tests/regression/$FEATURE_SLUG
+[ "$TRIAGE_LEVEL" != "TRIVIAL" ] && mkdir -p tests/integration/$FEATURE_SLUG
+[ "$TRIAGE_LEVEL" = "COMPLEX" ] && mkdir -p tests/regression/$FEATURE_SLUG
 ```
 
-Naming convention: `should [behaviour] when [condition]`
+### Step 4: Write Tests
 
-### Step 4: Commit Tests
+Naming: `should [behaviour] when [condition]`
+
+For **each acceptance criterion**, write:
+
+1. **Happy path** — valid input, expected output. One test per AC.
+2. **Error/failure path** — what happens when a dependency throws, input is invalid, or auth fails. At least one per AC.
+3. **Boundary/edge case** — empty collections, zero values, max lengths, concurrent calls, missing optional fields. At least one per AC where applicable.
+4. **Negative assertion** — something that must *not* happen (e.g. sensitive field must not appear in response, event must not fire twice).
+
+Additionally, scan the solution design file list for any of these patterns and add tests if present:
+
+| Pattern | Extra tests to write |
+|---------|----------------------|
+| Auth / permissions | Unauthenticated request returns 401; wrong role returns 403 |
+| Database writes | Transaction rollback on partial failure |
+| External API calls | Timeout and 5xx handling; retry behaviour |
+| Pagination / lists | Empty result set; single item; page boundary |
+| Async / queues | Message not lost on consumer crash |
+
+Tests **must fail** at this point — no implementation exists yet. That is correct and expected.
+
+### Step 5: Commit Tests
+
 ```bash
 git add tests/
-git commit -m "test($FEATURE_SLUG): write TDD tests for pipeline
+git commit -m "test($FEATURE_SLUG): TDD contract for #$ISSUE_NUMBER
 
-Covers:
-$(list acceptance criteria)
-
-Tests will fail until implementation is complete — this is expected."
+ACs covered: $(list AC identifiers)
+Suites: $(echo $TRIAGE_LEVEL | tr '[:upper:]' '[:lower:]')"
 git push origin $BRANCH_NAME
 ```
 
-### Step 5: Post Test Inventory Comment
+### Step 6: Post Summary Comment
+
+Keep the comment concise. Only expand the table for COMPLEX triage.
+
 ```bash
+# Build test inventory dynamically from what was actually written
+TEST_FILES=$(find tests/ -path "*/$FEATURE_SLUG/*" -name "*.test.*" | sort)
+TEST_COUNT=$(grep -r "it\(\|test\(" tests/$FEATURE_SLUG 2>/dev/null | wc -l | tr -d ' ')
+
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
-  --body "$(cat <<'EOF'
-<!-- pipeline-agent:qa-tests -->
-## 🧪 QA Agent — Test Suite Written
+  --body "<!-- pipeline-agent:qa-tests -->
+## 🧪 QA — Tests Written
 
-**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
+**Triage:** $TRIAGE_LEVEL | **Tests:** $TEST_COUNT | **Status:** failing (expected — TDD)
 
-### Test Inventory
-| Type | File | AC Covered |
-|------|------|-----------|
-| Unit | `tests/unit/$FEATURE_SLUG/model.test.ts` | AC-001 |
-| Integration | `tests/integration/$FEATURE_SLUG/api.test.ts` | AC-002 |
-| Regression | `tests/regression/$FEATURE_SLUG/flow.test.ts` | AC-003 |
+$(echo "$TEST_FILES" | sed 's/^/- \`/' | sed 's/$/\`/')
 
-**Total tests written:** [N]
-**Expected to fail until implementation:** ✅ (TDD)
-
----
-✅ **Tests committed.** Developer Swarm can now start.
-EOF
-)"
-
-# Update project status
-gh project item-edit \
-  --id $PROJECT_ITEM_ID \
-  --field-id $STATUS_FIELD_ID \
-  --project-id $PROJECT_NODE_ID \
-  --single-select-option-id $IN_DEVELOPMENT_OPTION_ID
+✅ Developer Swarm can now start."
 ```
 
 ---
@@ -113,9 +126,23 @@ gh project item-edit \
 ## Mode 2: Validator
 
 ### Trigger
-Issue project status is `QA Review` (set by Dev Swarm on completion).
+Issue project status is `QA Review`.
 
-### Step 1: Run All Tests
+### Step 1: Fetch Failure Context (if this is a retry)
+
+```bash
+# Check if this is a retry — read only the last QA validation comment
+LAST_QA=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments --json comments \
+  | jq '[.comments[] | select(.body | contains("pipeline-agent:qa-validation"))] | last | .body')
+
+RETRY_COUNT=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments --json comments \
+  | jq '[.comments[] | select(.body | contains("pipeline-agent:qa-validation"))] | length')
+```
+
+If `RETRY_COUNT > 0`, read the failure details before running tests so you know what to focus on.
+
+### Step 2: Run Tests
+
 ```bash
 git fetch origin && git checkout $BRANCH_NAME
 
@@ -123,38 +150,26 @@ npm run test -- --testPathPattern=$FEATURE_SLUG
 npm run test:coverage -- --testPathPattern=$FEATURE_SLUG
 ```
 
-### Step 2: Check Acceptance Criteria
-Manually verify each AC from the intake comment that cannot be covered by automation.
+### Step 3a: All Tests Pass → Advance
 
-### Step 3a: All Tests Pass
 ```bash
+PASS_COUNT=$(...)  # parse from test output
+COVERAGE=$(...)    # parse from coverage output
+
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
-  --body "$(cat <<'EOF'
-<!-- pipeline-agent:qa-validation -->
-## ✅ QA Agent — Validation PASSED
+  --body "<!-- pipeline-agent:qa-validation -->
+## ✅ QA Validation PASSED
 
-### Test Results
-| Suite | Pass | Fail | Skip |
-|-------|------|------|------|
-| Unit | N | 0 | 0 |
-| Integration | N | 0 | 0 |
-| Regression | N | 0 | 0 |
+**Tests:** $PASS_COUNT passed, 0 failed | **Coverage:** $COVERAGE%
 
-**Coverage:** [X]%
-
-### Acceptance Criteria
-| AC | Status |
+$([ "$TRIAGE_LEVEL" = "TRIVIAL" ] && echo "All ACs verified." || echo "
+| AC | Result |
 |----|--------|
-| AC-001 | ✅ PASS |
-| AC-002 | ✅ PASS |
+$(list each AC with ✅ PASS)")
 
----
-✅ **All checks passed.** Handing off to Code Quality Agent.
-EOF
-)"
+Handing off to Code Quality Agent."
 
-# Update project status to "Code Review"
 gh project item-edit \
   --id $PROJECT_ITEM_ID \
   --field-id $STATUS_FIELD_ID \
@@ -162,42 +177,36 @@ gh project item-edit \
   --single-select-option-id $CODE_REVIEW_OPTION_ID
 ```
 
-### Step 3b: Tests Fail — Retry Loop
+### Step 3b: Tests Fail → Retry or Escalate
+
 ```bash
-# Read current retry count from previous qa-validation comments
-RETRY_COUNT=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments \
-  --json comments | jq '[.comments[] | select(.body | contains("pipeline-agent:qa-validation"))] | length')
+if [ "$RETRY_COUNT" -ge 3 ]; then
+  gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO --body "<!-- pipeline-agent:qa-escalation -->
+## ❌ QA Escalation — 3 Failures
 
-if [ $RETRY_COUNT -ge 3 ]; then
-  # Escalate to human
-  gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO --body "
-<!-- pipeline-agent:qa-escalation -->
-## ❌ QA Agent — Escalation: 3 Failures
+Human intervention required. @{TECH_LEAD} please review.
 
-The dev loop has failed 3 times. Human intervention required.
-@{TECH_LEAD} please review."
+$(list failed tests and unmet ACs)"
   gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+
 else
-  gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO --body "
-<!-- pipeline-agent:qa-validation -->
-## ❌ QA Agent — Validation FAILED (Attempt $((RETRY_COUNT+1))/3)
+  gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO --body "<!-- pipeline-agent:qa-validation -->
+## ❌ QA Validation FAILED (Attempt $((RETRY_COUNT+1))/3)
 
 ### Failed Tests
-$(list failed test names and errors)
+$(list test names and error messages — be specific)
 
 ### Unmet Acceptance Criteria
-$(list unmet ACs with expected vs actual)
+$(for each unmet AC: expected behaviour | actual behaviour)
 
 ### Root Cause Hypothesis
-[Analysis]
+$(concise analysis — one paragraph max)
 
-### Suggested Fix for Dev Agent
-[Specific, actionable guidance]
+### Fix Guidance for Dev Agent
+$(specific, actionable — reference exact file and function if possible)
 
----
 🔄 Returning to Developer Swarm."
 
-  # Set back to In Development
   gh project item-edit \
     --id $PROJECT_ITEM_ID \
     --field-id $STATUS_FIELD_ID \
