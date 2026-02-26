@@ -6,6 +6,37 @@ An enterprise-grade, fully automated feature development pipeline for Claude Cod
 
 ---
 
+> [!WARNING]
+> ## ⚠️ DISCLAIMER — PLEASE READ BEFORE PROCEEDING (YES, ACTUALLY)
+>
+> **BY RUNNING THIS SOFTWARE, YOU ACKNOWLEDGE AND AGREE TO THE FOLLOWING:**
+>
+> This project is provided **"as-is," "as-was," "as-might-be,"** and **"as-whatever-it-becomes-after-the-agents-get-creative."** It is offered without warranty of any kind — express, implied, statutory, prophetic, or divined from the GitHub commit graph.
+>
+> The author(s) of this software **accept no liability** for any outcome resulting from its use, including but not limited to:
+>
+> - Autonomous agents rewriting code you did not ask them to rewrite
+> - Pull requests that are technically correct but spiritually wrong
+> - Compliance documents so thorough your legal team actually reads them
+> - Your developers questioning their purpose, value, and career trajectory
+> - GitHub rate limits hit at 2:47 AM on a Sunday
+> - **Cascading existential automation of processes that seemed safe**
+> - The heat death of your staging environment
+> - Temporal paradoxes caused by agents committing to branches that don't exist yet
+> - **The end of the world** (considered a known edge case; mitigation: max 3 retries)
+>
+> This software interacts with **real GitHub repositories, real project boards, and real CI/CD pipelines.** It will make **real commits, create real branches, and open real Pull Requests** on your behalf. It may also update compliance registers, architecture docs, and security audits in ways that are **legally and contractually significant** to your organisation. The agents have no concept of regret.
+>
+> **The author is a developer, not your lawyer, not your DPO, not your DevOps on-call, and not your therapist.** The EU Compliance Agent produces structured checklists — not legal advice. If your actual lawyer asks, this whole thing was a thought experiment.
+>
+> You are an adult. You have read-write access to your own infrastructure. You chose to run an autonomous multi-agent pipeline against it. **That was your decision.** The author waves warmly from a safe distance.
+>
+> Use in production at your own risk. Use on a Friday afternoon at significantly elevated risk. Use during a SOC 2 audit and the author cannot be held responsible for what happens next.
+>
+> *If none of the above deters you — welcome. You're going to love this.*
+
+---
+
 ## What Is This?
 
 **fertiger** is a multi-agent Claude Code pipeline that turns GitHub Issues into production-ready Pull Requests — autonomously. It uses GitHub as the single source of truth: every agent communicates exclusively through issue comments, and every status transition is tracked on your GitHub Project board.
