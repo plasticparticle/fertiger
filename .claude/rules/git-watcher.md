@@ -17,38 +17,45 @@ source .claude/config.sh
 
 ## Step 2: Find Ready Issues
 
-Fetch all items in the project with status "Ready":
+Use the pre-built poll script — it checks the project board and label fallback
+in one call and returns structured JSON:
+
 ```bash
-gh project item-list $GITHUB_PROJECT_NUMBER \
-  --owner $GITHUB_PROJECT_OWNER \
-  --format json \
-  --limit 50 \
-  | jq '.items[] | select(.status == "Ready") | {id: .id, number: .content.number, title: .title, url: .content.url}'
+POLL_RESULT=$(bash .claude/scripts/poll-once.sh)
+POLL_EXIT=$?
+echo "$POLL_RESULT"
 ```
 
-If no items are found with status "Ready", also check for issues with label
-`pipeline:ready` as a fallback:
+Exit code reference:
+- `0` — nothing to do
+- `1` — ready issues found (`.ready[]`)
+- `2` — approved issues found (`.approved[]`)
+- `3` — both
+
+Parse the results:
 ```bash
-gh issue list \
-  --repo $GITHUB_REPO \
-  --label "pipeline:ready" \
-  --json number,title,url,labels,body \
-  --state open
+READY_ISSUES=$(echo "$POLL_RESULT" | jq '.ready')
+APPROVED_ISSUES=$(echo "$POLL_RESULT" | jq '.approved')
 ```
 
 ## Step 3: For Each Ready Issue
 
 For each issue found, check it hasn't already been processed:
 ```bash
-# Get existing comments to see if pipeline already started
-gh issue view $ISSUE_NUMBER \
+# Check for existing pipeline comments — use test() not contains() to avoid jq \! escape bug
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --comments \
-  --json comments,labels,body
+  --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:")] | any')
+
+if [ "$ALREADY_STARTED" = "true" ]; then
+  echo "Issue #$ISSUE_NUMBER already in pipeline — skipping"
+  continue
+fi
 ```
 
-If a comment from the pipeline already exists (contains `<!-- pipeline-agent:`),
-skip this issue — it's already in progress.
+If a comment from the pipeline already exists, skip this issue — it's already in progress.
 
 ## Step 4: Claim the Issue
 
@@ -119,22 +126,24 @@ The Intake Agent takes over from here.
 
 ## Step 6: Watch for Approval (Polling Mode)
 
-If running in watch mode (`/pipeline:watch`), after handing off to intake/solution
-design, poll every 5 minutes for issues in `Awaiting Approval` status that have
-gained the `pipeline:approved` label:
+If running in watch mode (`/pipeline:watch`), run the pre-built watch loop.
+It polls every 5 minutes, resets idle timer when work is found, and stops
+after 8 hours of inactivity:
+
 ```bash
-gh issue list \
-  --repo $GITHUB_REPO \
-  --label "pipeline:approved" \
-  --json number,title,labels \
-  --state open
+bash .claude/scripts/watch.sh
 ```
 
-When found, resume the pipeline from QA Agent onward.
+The script streams `[watcher] ACTION: ...` lines when issues are ready or
+approved. React to those lines — do not reconstruct the polling logic inline.
+
+To override timing for testing:
+```bash
+POLL_INTERVAL=60 MAX_IDLE_SECONDS=600 bash .claude/scripts/watch.sh
+```
 
 ## Polling Interval
-When running as a watcher: check every 5 minutes.
-Stop after 8 hours of inactivity (no new issues found).
+Defined in `.claude/scripts/watch.sh` — default 300s poll, 28800s (8h) idle timeout.
 
 ## Error Handling
 If any agent in the pipeline sets `pipeline:blocked` label:

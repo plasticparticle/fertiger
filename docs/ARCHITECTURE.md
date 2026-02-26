@@ -44,6 +44,7 @@ and dependency checking.
 | Compliance Register | Document | Running log of GDPR/compliance decisions per feature | `docs/COMPLIANCE.md` |
 | Security Register | Document | Running log of security audits and patterns per feature | `docs/SECURITY.md` |
 | Pipeline Config | Shell script | GitHub Project node IDs, status option IDs, org/repo config | `.claude/config.sh` (gitignored) |
+| Triage Script | Shell script | Classifies feature complexity as TRIVIAL/STANDARD/COMPLEX before agents start deep analysis | `scripts/pipeline/triage.sh` |
 
 ---
 

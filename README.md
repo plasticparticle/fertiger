@@ -7,7 +7,8 @@ An enterprise-grade, fully automated feature development pipeline for Claude Cod
 ---
 
 > [!WARNING]
-> ## ⚠️ DISCLAIMER — PLEASE READ BEFORE PROCEEDING (YES, ACTUALLY)
+>
+> ## DISCALIMER - PLEASE READ BEFORE PROCEEDING (YES, ACTUALLY)
 >
 > **BY RUNNING THIS SOFTWARE, YOU ACKNOWLEDGE AND AGREE TO THE FOLLOWING:**
 >
