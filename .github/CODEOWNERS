@@ -1,0 +1,23 @@
+# CODEOWNERS
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default — pipeline maintainer owns everything not matched below
+* @plasticparticle
+
+# Pipeline agent rules — any change to agent behaviour requires review
+.claude/rules/ @plasticparticle
+
+# Pipeline configuration
+.claude/config.sh @plasticparticle
+CLAUDE.md @plasticparticle
+
+# Pipeline scripts
+scripts/pipeline/ @plasticparticle
+
+# Legal & compliance docs — must be reviewed by the tech lead
+docs/COMPLIANCE.md @plasticparticle
+docs/SECURITY.md @plasticparticle
+docs/ARCHITECTURE.md @plasticparticle
+
+# Tests
+tests/ @plasticparticle
