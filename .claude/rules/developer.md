@@ -12,6 +12,10 @@ The team lead spawns you with a specific file assignment.
 
 ---
 
+## Step 0: Announce Your Start
+
+Before doing anything else, post a comment so the issue shows who picked up which files:
+
 ## Step 1: Orient — Load Context
 
 ```bash
@@ -42,38 +46,74 @@ git pull origin $BRANCH_NAME   # always pull first — other agents may have pus
 
 ## Step 2: Detect the Stack
 
-Identify the language and toolchain from project files — do not assume:
+Use the pipeline stack detection script — do not detect the stack manually:
 
 ```bash
-# Detect package manager / language
-ls package.json Cargo.toml go.mod requirements.txt pyproject.toml pom.xml build.gradle 2>/dev/null
+# Source the stack detection script to get standardised variables
+source scripts/pipeline/detect-stack.sh
+
+# Now available:
+#   $STACK_LANGUAGE       e.g. typescript, python, go, rust, java
+#   $STACK_TEST_CMD       e.g. "npx jest", "pytest", "go test ./..."
+#   $STACK_LINT_CMD       e.g. "npx eslint src/", "ruff check ."
+#   $STACK_TYPECHECK_CMD  e.g. "npx tsc --noEmit" (empty if not applicable)
+#   $STACK_BUILD_CMD      e.g. "npm run build", "go build ./..."
 ```
 
-| File found | Stack | Test command | Lint command |
-|------------|-------|-------------|--------------|
-| `package.json` | Node/JS/TS | see scripts in package.json | `npm run lint` / `npx eslint` |
-| `Cargo.toml` | Rust | `cargo test` | `cargo clippy` |
-| `go.mod` | Go | `go test ./...` | `go vet ./...` |
-| `requirements.txt` / `pyproject.toml` | Python | `pytest` / `python -m pytest` | `ruff check` / `flake8` |
-| `pom.xml` | Java/Maven | `mvn test` | `mvn checkstyle:check` |
-| `build.gradle` | Java/Kotlin/Gradle | `./gradlew test` | `./gradlew lint` |
-
-```bash
-# For Node projects: check what test runner and scripts are configured
-cat package.json | jq '.scripts'
-```
-
-Use the project's configured commands throughout — never assume `npm run test`.
+Use `$STACK_TEST_CMD`, `$STACK_LINT_CMD`, and `$STACK_BUILD_CMD` throughout — never hardcode
+runner-specific commands.
 
 ---
 
-## Step 3: Understand the Tests First
+## Step 3: Claim Your Files (Swarm Lock)
+
+Before starting work, register your file ownership to prevent conflicts with
+other parallel agents:
+
+```bash
+source .claude/config.sh
+
+# Claim your assigned files
+scripts/pipeline/swarm-lock.sh claim "$AGENT_NAME" "src/models/MyModel.ts src/services/MyService.ts"
+
+# Check if any of your files are already claimed by another agent
+scripts/pipeline/swarm-lock.sh check "src/models/MyModel.ts"
+# Output: CLAIMED by agent-2 | FREE
+```
+
+If a file is already claimed by another agent:
+1. Post a blocked comment (see template below)
+2. Implement a stub/interface for the dependency first
+3. Poll with `swarm-lock.sh check` every 60 seconds until the lock is released
+
+---
+
+## Step 4: Check Dependencies on Other Agents
+
+Before implementing, check whether your files depend on files owned by another agent:
+
+```bash
+# Check imports in your assigned files
+scripts/pipeline/check-deps.sh src/api/routes/feature.ts
+# Output:
+#   MISSING: src/services/FeatureService.ts (not yet on branch)
+#   OK: src/middleware/auth.ts
+```
+
+If dependencies are missing:
+1. Post a comment flagging the dependency
+2. Implement a stub/interface first so your code compiles
+3. Complete the real integration once the dependency is pushed
+
+---
+
+## Step 5: Understand the Tests First
 
 Read every test file in your area before writing a single line of implementation.
 The tests are your contract — understand them completely before you start.
 
 ```bash
-# Find your test files (adapt extension to language)
+# Find your test files
 find tests/ -name "*[your-area]*" -type f
 ```
 
@@ -87,46 +127,17 @@ For each test file, read it in full. Note:
 
 ---
 
-## Step 4: Read Existing Code Before Writing
+## Step 6: Read Existing Code Before Writing
 
-For every **MODIFY** file in your assignment, read the full current file first:
-
-```bash
-# Read each file you will modify — understand existing patterns before touching them
-cat [file-to-modify]
-```
-
-For **CREATE** files, read 2–3 neighbouring files in the same directory to
+For every **MODIFY** file in your assignment, read the full current file first.
+For **CREATE** files, read 2-3 neighbouring files in the same directory to
 understand conventions (naming, imports, error handling, module structure).
 
-Ask yourself:
-- What patterns does the existing code use?
-- What would a reviewer expect to see here?
-- What shared utilities or base classes should I extend rather than rewrite?
-
 ---
 
-## Step 5: Check for Dependency on Other Agents
+## Step 7: Implement
 
-Before implementing, check whether your files depend on interfaces or types
-that another agent in the swarm is creating simultaneously:
-
-```bash
-# See what other dev agents have already pushed
-git log origin/$BRANCH_NAME --oneline --since="1 hour ago"
-```
-
-If your code imports from a file another agent owns and that file doesn't
-exist yet:
-1. Post a comment flagging the dependency (see blocked template below)
-2. Implement a stub / interface first so your tests can at least compile
-3. Complete the real integration once the dependency is pushed
-
----
-
-## Step 6: Implement
-
-Write code that makes your tests pass. Follow the patterns you read in Step 4.
+Write code that makes your tests pass. Follow the patterns you read in Step 6.
 
 **Universal rules (all languages):**
 - No debug/print statements in production paths (`console.log`, `print`, `fmt.Println`, etc.)
@@ -136,115 +147,92 @@ Write code that makes your tests pass. Follow the patterns you read in Step 4.
 - No hardcoded secrets, URLs, or environment-specific values — use config/env
 - Respect compliance constraints from the EU Compliance Agent (data residency, encryption, PII handling)
 
-**After each file, verify it compiles / parses:**
+---
+
+## Step 8: Run Tests Incrementally
+
+After each file is complete, run the tests for your area using the wrapper script:
+
 ```bash
-# Node/TS example
-npx tsc --noEmit
+# Run tests filtered to your feature area
+scripts/pipeline/run-tests.sh "$FEATURE_SLUG"
 
-# Go
-go build ./...
-
-# Rust
-cargo check
-
-# Python
-python -m py_compile [file]
+# Or run all tests
+scripts/pipeline/run-tests.sh
 ```
 
-Fix compile errors immediately — do not accumulate them.
+The script handles runner-specific flags automatically. If tests fail, fix them
+before moving to the next file. Do not carry forward broken code.
 
 ---
 
-## Step 7: Run Tests Incrementally
-
-Do not wait until everything is done. After each file is complete, run the
-relevant tests:
-
-```bash
-# Run only the tests covering your area (adapt to your stack/runner)
-# Jest (Node):      npx jest --testPathPattern="[your-area]"
-# Go:               go test ./[package]/...
-# Pytest:           pytest tests/[your-area]/ -v
-# Cargo:            cargo test [module_name]
-# Maven:            mvn test -Dtest=[TestClass]
-```
-
-If tests fail, fix them before moving to the next file. Do not carry forward
-broken code.
-
----
-
-## Step 8: Final Verification
+## Step 9: Final Verification
 
 When all your files are done, run the full test suite for your area plus
 a static analysis pass:
 
 ```bash
 # Full test run for your area
-[test command] [your area filter]
+scripts/pipeline/run-tests.sh "$FEATURE_SLUG"
 
 # Lint / static analysis
-[lint command]
+$STACK_LINT_CMD
 
 # Type check (if applicable)
-[type check command]
+[ -n "$STACK_TYPECHECK_CMD" ] && $STACK_TYPECHECK_CMD
 ```
 
 If anything fails, fix it now. Do not push failing code.
 
 ---
 
-## Step 9: Pull, Then Commit and Push
+## Step 10: Release Lock, Commit, and Push
 
 ```bash
-# Pull any changes other agents have pushed while you were working
+# Release your file ownership lock
+scripts/pipeline/swarm-lock.sh release "$AGENT_NAME"
+
+# Pull any changes other agents pushed while you were working
 git pull origin $BRANCH_NAME --rebase
 
-# Stage only YOUR assigned files — never stage files outside your assignment
+# Stage only YOUR assigned files
 git add [list your specific files explicitly]
-
-# Verify what you're about to commit
 git diff --cached --stat
 
 git commit -m "feat($FEATURE_SLUG): implement [your area]
 
 Implements: REQ-XXX, REQ-XXX
-Tests: [test command] [filter]
+Tests: scripts/pipeline/run-tests.sh $FEATURE_SLUG
 Files: [list]"
 
 git push origin $BRANCH_NAME
 ```
 
-If the rebase has conflicts with another agent's changes:
-1. Resolve the conflict, preferring the union of both agents' work
-2. If the conflict is in a file outside your assignment, notify the team lead before resolving
-3. Never discard another agent's work to resolve a conflict
-
 ---
 
-## Step 10: Signal Completion
+## Step 11: Signal Completion
 
 ```bash
-TEST_OUTPUT=$([test command] [your area filter] 2>&1 | tail -20)
+TEST_OUTPUT=$(scripts/pipeline/run-tests.sh "$FEATURE_SLUG" 2>&1 | tail -20)
 
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "<!-- pipeline-agent:dev-$AGENT_NAME -->
-## 💻 Dev Agent ($AGENT_NAME) — Complete
+## Dev Agent ($AGENT_NAME) — Complete
+
+**Assigned area:** [description]
 
 **Assigned area:** [description]
 
 **Files implemented:**
 $(git diff main..HEAD --name-only | grep [your pattern] | sed 's/^/- /')
 
-**Test result:** ✅ PASS / ❌ FAIL
+**Test result:** PASS / FAIL
 **Tests run:** [N] passed, [N] failed, [N] skipped
 
-\`\`\`
 $TEST_OUTPUT
-\`\`\`
 
-**Static analysis:** ✅ PASS / ❌ FAIL (describe any issues)
+**Static analysis:** PASS / FAIL (describe any issues)
 
 **Notes for team lead / QA:**
 [Any integration notes, known limitations, or things to verify]"
@@ -259,13 +247,13 @@ Read the QA validation failure comment carefully:
 ```bash
 gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments \
   --json comments \
-  | jq '[.comments[] | select(.body | contains("pipeline-agent:qa-validation"))] | last'
+  | jq '[.comments[] | select(.body | test("pipeline-agent:qa-validation"))] | last'
 ```
 
 - Fix **only** what the failure report describes
 - Do not refactor unrelated code
 - Re-run the failing tests locally before pushing
-- Post a new Step 10 completion comment with updated results
+- Post a new Step 11 completion comment with updated results
 
 ---
 
@@ -277,7 +265,7 @@ If you cannot proceed (missing dependency, conflicting file ownership, unclear r
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "<!-- pipeline-agent:dev-$AGENT_NAME-blocked -->
-## ⚠️ Dev Agent ($AGENT_NAME) — Blocked
+## Dev Agent ($AGENT_NAME) — Blocked
 
 **Blocked on:** [describe the blocker]
 **Files affected:** [list]
@@ -298,7 +286,7 @@ posted `<!-- pipeline-agent:dev-[name] -->` with PASS status:
 # Verify all expected agents have reported in
 gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments \
   --json comments \
-  | jq '[.comments[].body | select(contains("pipeline-agent:dev-"))] | length'
+  | jq '[.comments[].body | select(test("pipeline-agent:dev-"))] | length'
 
 # Set status to QA Review
 gh project item-edit \
@@ -309,7 +297,7 @@ gh project item-edit \
 
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
   --body "<!-- pipeline-agent:dev-complete -->
-## 💻 Developer Swarm — All Agents Complete
+## Developer Swarm — All Agents Complete
 
 All implementation files committed. Handing off to QA Validation.
 

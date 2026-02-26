@@ -71,12 +71,12 @@ fi
 
 echo ""
 echo "--- AC-009: run-tests.sh is executable ---"
-assert_executable "run-tests.sh is executable" "$SCRIPT"
+assert_executable "run-tests.sh is executable" "$REPO_ROOT/$SCRIPT"
 
 echo ""
 echo "--- AC-003: run-tests.sh sources detect-stack.sh internally ---"
-# Check that run-tests.sh references detect-stack.sh
-if grep -q "detect-stack" "$SCRIPT"; then
+# Check that run-tests.sh references detect-stack.sh (use absolute path)
+if grep -q "detect-stack" "$REPO_ROOT/$SCRIPT"; then
   echo "  PASS: run-tests.sh references detect-stack.sh"
   PASS=$((PASS + 1))
 else
@@ -102,8 +102,10 @@ cat > "$FAIL_DIR/package.json" <<'PKGJSON'
 PKGJSON
 
 # The script should exit non-zero when tests fail
+# Unset the recursion guard — it may be inherited from the outer run-tests.sh
+# invocation when this test runs as part of the full test suite.
 FAIL_EXIT=0
-bash -c "cd '$FAIL_DIR' && '$REPO_ROOT/$SCRIPT'" 2>/dev/null || FAIL_EXIT=$?
+bash -c "unset _PIPELINE_RUN_TESTS_RUNNING; cd '$FAIL_DIR' && '$REPO_ROOT/$SCRIPT'" 2>/dev/null || FAIL_EXIT=$?
 if [ "$FAIL_EXIT" -ne 0 ]; then
   echo "  PASS: run-tests.sh exits non-zero when tests fail"
   PASS=$((PASS + 1))
@@ -114,8 +116,9 @@ fi
 
 echo ""
 echo "--- AC-003: run-tests.sh produces PASS/FAIL summary line ---"
-# Test with this repo's actual shell tests (they should pass)
-SUMMARY=$(bash "$SCRIPT" "dev-swarm-tooling" 2>&1 || true)
+# Test with eu-compliance tests (avoids recursive self-invocation)
+# Use absolute path to avoid CWD issues after subshell operations
+SUMMARY=$(bash "$REPO_ROOT/$SCRIPT" "eu-compliance" 2>&1 || true)
 if echo "$SUMMARY" | grep -q "PASS\|FAIL"; then
   echo "  PASS: run-tests.sh outputs PASS or FAIL summary"
   PASS=$((PASS + 1))
@@ -127,8 +130,8 @@ fi
 
 echo ""
 echo "--- AC-004: run-tests.sh filter translates to --testPathPattern for Jest ---"
-# Check that the script handles Jest filter flag
-if grep -q "testPathPattern\|--filter\|test.*pattern" "$SCRIPT"; then
+# Check that the script handles Jest filter flag (use absolute path)
+if grep -q "testPathPattern\|--filter\|test.*pattern" "$REPO_ROOT/$SCRIPT"; then
   echo "  PASS: run-tests.sh contains Jest testPathPattern filter translation"
   PASS=$((PASS + 1))
 else
@@ -138,7 +141,7 @@ fi
 
 echo ""
 echo "--- AC-004: run-tests.sh filter translates to pytest path for Python ---"
-if grep -q "pytest" "$SCRIPT"; then
+if grep -q "pytest" "$REPO_ROOT/$SCRIPT"; then
   echo "  PASS: run-tests.sh contains pytest runner reference"
   PASS=$((PASS + 1))
 else
@@ -148,7 +151,7 @@ fi
 
 echo ""
 echo "--- AC-004: run-tests.sh filter translates for Go runner ---"
-if grep -q "go test" "$SCRIPT"; then
+if grep -q "go test" "$REPO_ROOT/$SCRIPT"; then
   echo "  PASS: run-tests.sh contains go test runner reference"
   PASS=$((PASS + 1))
 else
@@ -158,7 +161,7 @@ fi
 
 echo ""
 echo "--- AC-004: run-tests.sh filter translates for Cargo runner ---"
-if grep -q "cargo test" "$SCRIPT"; then
+if grep -q "cargo test" "$REPO_ROOT/$SCRIPT"; then
   echo "  PASS: run-tests.sh contains cargo test runner reference"
   PASS=$((PASS + 1))
 else
