@@ -265,6 +265,112 @@ claude "/agent:qa-validate 42"
 claude "/pipeline:report"
 ```
 
+### YOLO Mode — Full Auto (God Help You)
+
+By default, Claude Code asks for your permission before taking actions — file edits,
+bash commands, git pushes. This is intentional. This is wise. This is the voice of reason
+trying to save you from yourself.
+
+You can disable all of that:
+
+```bash
+claude --dangerously-skip-permissions "/pipeline:watch"
+```
+
+In YOLO mode, every action is automatically approved. No prompts. No confirmations.
+No last-second opportunity to say "wait, actually—". Just eleven autonomous agents
+doing their thing, unattended, at 2 AM, while you sleep peacefully, blissfully unaware
+that your `main` branch now has feelings about it.
+
+What you also need to understand is that running this command is the financial equivalent of
+handing eleven strangers your Anthropic account details, your credit card, a note that says
+*"treat yourselves"*, and then leaving the country. The agents will treat themselves. There is
+no upper bound on how thoroughly they will treat themselves.
+
+The moment you walk away, they throw a party. Not a metaphorical party. A real, raging,
+context-window-destroying rager where every agent arrives with a plus-one and the drinks are tokens.
+Open bar. Your tab. They did not ask.
+
+The Architect Agent reads your entire codebase — twice — just to feel something. The EU Compliance
+Agent works through all sixteen EU regulations with the thoroughness of someone billing by the hour,
+except it isn't billing you by the hour, it is billing you by the *token*, and it has opinions about
+all sixteen regulations and it will share every single one of them. The Developer Swarm spins up
+multiple parallel instances, each one independently exploring the same files the others are already
+reading, like a group of tourists who refused to share a guidebook and also each bought the
+collector's edition. The Security Agent runs `npm audit` and then reads every single CVE entry
+aloud to itself in the dark, at length, in full, on your dime.
+
+Nobody is counting. Nobody is stopping. Nobody has ever once looked at a token and thought
+*"perhaps that is enough tokens."* The context window is not a limit — it is a *challenge*,
+and the agents are competitive. Your Anthropic bill will arrive with the quiet confidence of a
+document that knows exactly what it did and has no intention of apologising for it.
+
+Check your usage dashboard *before* you run this. Write down the number. Screenshot it.
+Then run it, go to sleep, wake up, and open the dashboard again. That gap — that is YOLO mode.
+That is what enthusiasm looks like when it has API access and no sense of fiscal responsibility.
+
+> [!CAUTION]
+>
+> ## ☢️ YOLO MODE DISCLAIMER — READ THIS AND THEN DO IT ANYWAY BECAUSE YOU WON'T LISTEN
+>
+> **YOLO mode removes every friction point that stood between your infrastructure and a
+> confident, well-intentioned AI that has never once experienced consequences.**
+>
+> By running with `--dangerously-skip-permissions` you are consenting to:
+>
+> - Real commits pushed to real branches without a single human eyebrow raised
+> - Real Pull Requests opened before you've finished your morning coffee
+> - Real compliance documents generated with the energy of a legal intern who just
+>   discovered ctrl+C ctrl+V
+> - Real `npm audit` runs that may surface horrors you were previously at peace not knowing about
+> - Real `git rebase` operations executed with the quiet confidence of someone who has
+>   never, personally, lost a week of work
+> - **Eleven agents operating in parallel with zero human supervision** — much like a
+>   microservices architecture in production, except at least those have SLAs
+> - Eleven agents with unsupervised access to your Anthropic account, each operating on
+>   the foundational belief that thoroughness is a virtue and tokens are infinite —
+>   one of those things is true
+> - Your Anthropic bill arriving at the end of the month like a formal letter from a law firm:
+>   heavy, serious, and detailing events you vaguely remember authorising but not quite like *this*
+> - The EU Compliance Agent alone will read sixteen regulations, cross-reference three EDPB
+>   guidelines, cite two ECJ rulings, and update `docs/COMPLIANCE.md` in a way that makes
+>   your actual lawyer feel personally attacked — and it will do all of this *every single run*,
+>   fresh, from scratch, from first principles, at full price, with the energy of someone who
+>   simply cannot believe anyone has not yet addressed Article 35 and is not going to let
+>   the minor matter of cost stand in the way of addressing it now
+>
+> The pipeline *will* ask clarifying questions. The pipeline *will* wait for `pipeline:approved`.
+> These are the two remaining speed bumps between you and total automation. Cherish them.
+> They are the last two humans in the building.
+>
+> This flag is named `--dangerously-skip-permissions` and not `--conveniently-skip-permissions`
+> for a reason. The author named it that. On purpose. While making direct eye contact with you.
+>
+> **Recommended use cases for YOLO mode:**
+> - Throwaway repos where failure is educational
+> - Personal projects where the only victim is you
+> - CTF challenges, hackathons, demos — anywhere the blast radius is contained to your ego
+> - Situations where you have read the disclaimer above *and the one at the top of this README*
+>   and thought "yes, this is fine, I have good insurance"
+>
+> **Not recommended:**
+> - Production
+> - Staging (which is just production with plausible deniability)
+> - Any Friday after 3 PM
+> - Any environment your company's lawyers know the name of
+> - Anywhere a compliance officer has ever set foot
+>
+> *These agents will not stop. They will not get tired. They will not check the clock, question*
+> *their life choices, or quietly wonder if this could have been an email. They will work.*
+> *They will work until every acceptance criterion is green, every compliance checkbox is ticked,*
+> *every CVE has been acknowledged, and every last file has been read, judged, and committed.*
+>
+> *They will burn through your token quota the way a Victorian mill burns through coal:*
+> *without sentiment, without pause, and with a productivity that would make you deeply uncomfortable*
+> *if you thought about it too hard. They will not think about it at all.*
+> *They are already on the next task.*
+> *Your bill is already on the next line item.*
+
 ---
 
 ## Human Checkpoints
