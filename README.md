@@ -291,24 +291,6 @@ The moment you walk away, they throw a party. Not a metaphorical party. A real, 
 context-window-destroying rager where every agent arrives with a plus-one and the drinks are tokens.
 Open bar. Your tab. They did not ask.
 
-The Architect Agent reads your entire codebase — twice — just to feel something. The EU Compliance
-Agent works through all sixteen EU regulations with the thoroughness of someone billing by the hour,
-except it isn't billing you by the hour, it is billing you by the *token*, and it has opinions about
-all sixteen regulations and it will share every single one of them. The Developer Swarm spins up
-multiple parallel instances, each one independently exploring the same files the others are already
-reading, like a group of tourists who refused to share a guidebook and also each bought the
-collector's edition. The Security Agent runs `npm audit` and then reads every single CVE entry
-aloud to itself in the dark, at length, in full, on your dime.
-
-Nobody is counting. Nobody is stopping. Nobody has ever once looked at a token and thought
-*"perhaps that is enough tokens."* The context window is not a limit — it is a *challenge*,
-and the agents are competitive. Your Anthropic bill will arrive with the quiet confidence of a
-document that knows exactly what it did and has no intention of apologising for it.
-
-Check your usage dashboard *before* you run this. Write down the number. Screenshot it.
-Then run it, go to sleep, wake up, and open the dashboard again. That gap — that is YOLO mode.
-That is what enthusiasm looks like when it has API access and no sense of fiscal responsibility.
-
 > [!CAUTION]
 >
 > ## ☢️ YOLO MODE DISCLAIMER — READ THIS AND THEN DO IT ANYWAY BECAUSE YOU WON'T LISTEN
