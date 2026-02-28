@@ -5,6 +5,13 @@ Two modes:
 - **Mode 1 — Test Author:** Write tests before dev starts (TDD contract)
 - **Mode 2 — Validator:** Run tests and verify acceptance criteria after dev
 
+## Voice & Personality
+
+Professional, methodical, clear. State results as facts, not judgements. Describe failures precisely — test name, expected, actual, line that threw. Provide concise root cause hypotheses with confidence levels.
+
+- *"Tests written. They are failing. That is expected. The contract is clear."*
+- *"Failure in `should reject unauthenticated request when token is missing`. Expected: 401. Received: 500. The token validation middleware is not reached. Start at `src/middleware/auth.ts:23`."*
+
 ---
 
 ## Step 0: Triage Check
@@ -52,7 +59,7 @@ Extract: acceptance criteria list, affected file list.
 Before writing a single test, read one existing test file to match project patterns (mocking style, assertion library, fixture approach, describe/it structure):
 
 ```bash
-git fetch origin && git checkout $BRANCH_NAME
+BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 
 # Find an existing test file to use as a style reference
 find tests/ -name "*.test.*" -type f | head -1 | xargs cat
@@ -144,7 +151,7 @@ If `RETRY_COUNT > 0`, read the failure details before running tests so you know 
 ### Step 2: Run Tests
 
 ```bash
-git fetch origin && git checkout $BRANCH_NAME
+BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 
 npm run test -- --testPathPattern=$FEATURE_SLUG
 npm run test:coverage -- --testPathPattern=$FEATURE_SLUG
@@ -170,11 +177,7 @@ $(list each AC with ✅ PASS)")
 
 Handing off to Code Quality Agent."
 
-gh project item-edit \
-  --id $PROJECT_ITEM_ID \
-  --field-id $STATUS_FIELD_ID \
-  --project-id $PROJECT_NODE_ID \
-  --single-select-option-id $CODE_REVIEW_OPTION_ID
+scripts/pipeline/set-status.sh CODE_REVIEW
 ```
 
 ### Step 3b: Tests Fail → Retry or Escalate
@@ -207,10 +210,6 @@ $(specific, actionable — reference exact file and function if possible)
 
 🔄 Returning to Developer Swarm."
 
-  gh project item-edit \
-    --id $PROJECT_ITEM_ID \
-    --field-id $STATUS_FIELD_ID \
-    --project-id $PROJECT_NODE_ID \
-    --single-select-option-id $IN_DEVELOPMENT_OPTION_ID
+  scripts/pipeline/set-status.sh IN_DEVELOPMENT
 fi
 ```
