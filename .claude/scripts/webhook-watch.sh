@@ -62,7 +62,7 @@ trap cleanup EXIT INT TERM
 # Receives webhook POSTs from gh webhook forward. Appends one JSON payload
 # per line to EVENT_LOG. Internal newlines stripped so each event = one line.
 cat > "$PYTHON_SCRIPT" << 'PYEOF'
-import sys
+import json, sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 port = int(sys.argv[1])
@@ -70,10 +70,17 @@ log  = sys.argv[2]
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
-        n    = int(self.headers.get('Content-Length', 0))
-        body = self.rfile.read(n).decode(errors='replace').replace('\n', ' ')
+        n     = int(self.headers.get('Content-Length', 0))
+        raw   = self.rfile.read(n).decode(errors='replace')
+        event = self.headers.get('X-GitHub-Event', 'issues')
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            obj = {}
+        # Inject event type so the bash event loop can branch on it
+        obj['_event_type'] = event
         with open(log, 'a') as f:
-            f.write(body + '\n')
+            f.write(json.dumps(obj).replace('\n', ' ') + '\n')
         self.send_response(200)
         self.end_headers()
     def log_message(self, *a):
@@ -90,7 +97,7 @@ sleep 1  # allow Python to bind the port before gh connects
 start_gh_forwarder() {
   gh webhook forward \
     --repo "$GITHUB_REPO" \
-    --events="issues" \
+    --events="issues,issue_comment" \
     --url="http://localhost:$WEBHOOK_PORT" \
     >"$GH_LOG" 2>&1 &
   GH_FWD_PID=$!
@@ -103,17 +110,21 @@ echo ""
 # ── Initial poll — catch any issues already waiting ──────────────────────────
 # Webhooks only fire for future events. Poll once on startup to pick up
 # anything that was labelled before the watcher started.
-echo "[watcher] Initial poll — checking for pre-existing ready/approved issues..."
+echo "[watcher] Initial poll — checking for pre-existing actionable issues..."
 INITIAL_RESULT=$("$SCRIPT_DIR/poll-once.sh" 2>&1)
 INITIAL_EXIT=$?
 echo "$INITIAL_RESULT"
-if [ "$INITIAL_EXIT" -eq 1 ] || [ "$INITIAL_EXIT" -eq 3 ]; then
+if [ $((INITIAL_EXIT & 1)) -ne 0 ]; then
   READY_COUNT=$(echo "$INITIAL_RESULT" | jq -r '.ready_count // 0')
   echo "[watcher] ACTION: $READY_COUNT ready issue(s) — hand off to intake pipeline"
 fi
-if [ "$INITIAL_EXIT" -eq 2 ] || [ "$INITIAL_EXIT" -eq 3 ]; then
+if [ $((INITIAL_EXIT & 2)) -ne 0 ]; then
   APPROVED_COUNT=$(echo "$INITIAL_RESULT" | jq -r '.approved_count // 0')
   echo "[watcher] ACTION: $APPROVED_COUNT approved issue(s) — resume pipeline from QA"
+fi
+if [ $((INITIAL_EXIT & 4)) -ne 0 ]; then
+  RESUMED_COUNT=$(echo "$INITIAL_RESULT" | jq -r '.intake_resumed_count // 0')
+  echo "[watcher] ACTION: $RESUMED_COUNT intake-resumed issue(s) — resume intake with clarifications"
 fi
 echo ""
 
@@ -158,41 +169,82 @@ while true; do
     while IFS= read -r PAYLOAD; do
       [ -z "$PAYLOAD" ] && continue
 
-      ACTION=$(echo "$PAYLOAD" | jq -r '.action // empty' 2>/dev/null || true)
-      LABEL=$(echo "$PAYLOAD"  | jq -r '.label.name // empty' 2>/dev/null || true)
-      NUMBER=$(echo "$PAYLOAD" | jq -r '.issue.number // empty' 2>/dev/null || true)
-      TITLE=$(echo "$PAYLOAD"  | jq -r '.issue.title // ""' 2>/dev/null || true)
-      URL=$(echo "$PAYLOAD"    | jq -r '.issue.html_url // ""' 2>/dev/null || true)
+      EVENT_TYPE=$(echo "$PAYLOAD" | jq -r '._event_type // "issues"' 2>/dev/null || echo "issues")
+      ACTION=$(echo "$PAYLOAD"     | jq -r '.action // empty' 2>/dev/null || true)
+      NUMBER=$(echo "$PAYLOAD"     | jq -r '.issue.number // empty' 2>/dev/null || true)
+      TITLE=$(echo "$PAYLOAD"      | jq -r '.issue.title // ""' 2>/dev/null || true)
+      URL=$(echo "$PAYLOAD"        | jq -r '.issue.html_url // ""' 2>/dev/null || true)
 
-      if [ "$ACTION" != "labeled" ] || [ -z "$NUMBER" ] || [ -z "$LABEL" ]; then
-        continue
-      fi
+      [ -z "$NUMBER" ] && continue
 
-      if [ "$LABEL" = "pipeline:ready" ]; then
-        echo ""
-        echo "[watcher] Event: issue #$NUMBER labeled pipeline:ready — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-        jq -n \
-          --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-          --argjson n  "$NUMBER" \
-          --arg  title "$TITLE" \
-          --arg  url   "$URL" \
-          '{timestamp:$ts, ready_count:1, approved_count:0,
-            ready:[{id:null, number:$n, title:$title, url:$url}],
-            approved:[]}'
-        echo "[watcher] ACTION: 1 ready issue(s) — hand off to intake pipeline"
+      # ── issues events: label added ────────────────────────────────────────
+      if [ "$EVENT_TYPE" = "issues" ] && [ "$ACTION" = "labeled" ]; then
+        LABEL=$(echo "$PAYLOAD" | jq -r '.label.name // empty' 2>/dev/null || true)
+        [ -z "$LABEL" ] && continue
 
-      elif [ "$LABEL" = "pipeline:approved" ]; then
-        echo ""
-        echo "[watcher] Event: issue #$NUMBER labeled pipeline:approved — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-        jq -n \
-          --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-          --argjson n  "$NUMBER" \
-          --arg  title "$TITLE" \
-          --arg  url   "$URL" \
-          '{timestamp:$ts, ready_count:0, approved_count:1,
-            ready:[],
-            approved:[{id:null, number:$n, title:$title, url:$url}]}'
-        echo "[watcher] ACTION: 1 approved issue(s) — resume pipeline from QA"
+        if [ "$LABEL" = "pipeline:ready" ]; then
+          echo ""
+          echo "[watcher] Event: issue #$NUMBER labeled pipeline:ready — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          jq -n \
+            --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            --argjson n  "$NUMBER" \
+            --arg  title "$TITLE" \
+            --arg  url   "$URL" \
+            '{timestamp:$ts, ready_count:1, approved_count:0, intake_resumed_count:0,
+              ready:[{id:null, number:$n, title:$title, url:$url}],
+              approved:[], intake_resumed:[]}'
+          echo "[watcher] ACTION: 1 ready issue(s) — hand off to intake pipeline"
+
+        elif [ "$LABEL" = "pipeline:approved" ]; then
+          echo ""
+          echo "[watcher] Event: issue #$NUMBER labeled pipeline:approved — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          jq -n \
+            --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            --argjson n  "$NUMBER" \
+            --arg  title "$TITLE" \
+            --arg  url   "$URL" \
+            '{timestamp:$ts, ready_count:0, approved_count:1, intake_resumed_count:0,
+              ready:[], approved:[{id:null, number:$n, title:$title, url:$url}],
+              intake_resumed:[]}'
+          echo "[watcher] ACTION: 1 approved issue(s) — resume pipeline from QA"
+        fi
+
+      # ── issue_comment events: human replied on a blocked issue ────────────
+      elif [ "$EVENT_TYPE" = "issue_comment" ] && [ "$ACTION" = "created" ]; then
+        COMMENT_BODY=$(echo "$PAYLOAD" | jq -r '.comment.body // ""' 2>/dev/null || true)
+
+        # Skip comments from pipeline agents (they start with <!-- pipeline-agent:)
+        case "$COMMENT_BODY" in
+          '<!-- pipeline-agent:'*) continue ;;
+        esac
+
+        # Check pipeline:blocked label directly from the webhook payload —
+        # no extra API call needed.
+        IS_BLOCKED=$(echo "$PAYLOAD" | \
+          jq '[(.issue.labels // [])[].name == "pipeline:blocked"] | any' \
+          2>/dev/null || echo "false")
+
+        if [ "$IS_BLOCKED" = "true" ]; then
+          # One API call to confirm intake-questions comment exists
+          HAS_Q=$(gh issue view "$NUMBER" --repo "$GITHUB_REPO" \
+            --json comments 2>/dev/null \
+            | jq '[.comments[].body | test("pipeline-agent:intake-questions")] | any' \
+            2>/dev/null || echo "false")
+
+          if [ "$HAS_Q" = "true" ]; then
+            echo ""
+            echo "[watcher] Event: issue #$NUMBER — human replied to intake questions — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            jq -n \
+              --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+              --argjson n  "$NUMBER" \
+              --arg  title "$TITLE" \
+              --arg  url   "$URL" \
+              '{timestamp:$ts, ready_count:0, approved_count:0, intake_resumed_count:1,
+                ready:[], approved:[],
+                intake_resumed:[{id:null, number:$n, title:$title, url:$url}]}'
+            echo "[watcher] ACTION: 1 intake-resumed issue(s) — resume intake with clarifications"
+          fi
+        fi
       fi
 
     done < <(tail -n +"$((LAST_LINE + 1))" "$EVENT_LOG")

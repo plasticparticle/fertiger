@@ -56,8 +56,34 @@ Read the issue body and identify:
 
 ## Step 4: Ask Clarifying Questions (if needed)
 
-If there are ambiguities, post a comment tagging the issue author BEFORE
-writing requirements:
+First, check whether questions were already asked and answered (this step is
+re-entered automatically when the watcher detects a human reply):
+
+```bash
+source .claude/config.sh
+
+QUESTIONS_TS=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq -r '[.comments[] | select(.body | test("pipeline-agent:intake-questions"))] | last | .created_at // empty')
+
+if [ -n "$QUESTIONS_TS" ]; then
+  # Questions were previously posted — check for a human reply after them
+  HAS_ANSWER=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+    | jq --arg ts "$QUESTIONS_TS" \
+      '[.comments[] | select(.created_at > $ts and (.body | test("pipeline-agent:") | not))] | any')
+
+  if [ "$HAS_ANSWER" = "true" ]; then
+    scripts/pipeline/log.sh "Intake" "Clarifications received — proceeding to requirements" STEP
+    # The human's answers are in the comment thread — proceed directly to Step 5.
+    # Do NOT post another questions comment.
+  else
+    scripts/pipeline/log.sh "Intake" "Questions already posted — still awaiting reply" STEP
+    exit 0  # nothing to do; watcher will re-trigger when human replies
+  fi
+fi
+```
+
+If no questions have been posted yet and the issue has ambiguities, post them now:
+
 ```bash
 scripts/pipeline/log.sh "Intake" "Clarifying questions needed — posting and waiting for author reply" STEP
 gh issue comment $ISSUE_NUMBER \
@@ -72,7 +98,8 @@ the following points:
 1. **[Question 1]** — [why this matters]
 2. **[Question 2]** — [why this matters]
 
-Please reply to this comment. The pipeline will resume once these are answered.
+Please reply to this comment. The pipeline will resume automatically once
+these are answered — no manual re-trigger needed.
 EOF
 )"
 
@@ -82,9 +109,9 @@ gh issue edit $ISSUE_NUMBER \
   --add-label "pipeline:blocked"
 ```
 
-**Wait for the author's reply before continuing.** The watcher will detect
-when the blocking label is removed by the author or a team member after
-questions are answered.
+**The watcher detects human replies automatically.** When the author posts a
+reply, the watcher removes `pipeline:blocked` and re-invokes the Intake Agent,
+which then reaches Step 5 via the answered-questions path above.
 
 ## Step 5: Write Requirements Comment
 

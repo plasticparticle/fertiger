@@ -7,6 +7,11 @@
 # The agent (git-watcher.md) runs this script and acts on its output.
 # It does NOT need to construct polling logic inline.
 #
+# poll-once.sh exit codes are a bitmask:
+#   bit 0 (1) — ready issues found
+#   bit 1 (2) — approved issues found
+#   bit 2 (4) — intake-resumed issues found (human replied to questions)
+#
 # Environment overrides:
 #   POLL_INTERVAL      seconds between polls   (default: 60 = 1 min)
 #   MAX_IDLE_SECONDS   stop after N idle secs  (default: 28800 = 8 h)
@@ -43,13 +48,20 @@ while [ "$IDLE_SECONDS" -lt "$MAX_IDLE_SECONDS" ]; do
     echo "[watcher] Nothing actionable. Next check in ${POLL_INTERVAL}s."
   else
     IDLE_SECONDS=0  # reset idle counter whenever work is found
-    if [ "$EXIT_CODE" -eq 1 ] || [ "$EXIT_CODE" -eq 3 ]; then
+
+    if [ $((EXIT_CODE & 1)) -ne 0 ]; then
       READY_COUNT=$(echo "$RESULT" | jq -r '.ready_count // 0')
       echo "[watcher] ACTION: $READY_COUNT ready issue(s) — hand off to intake pipeline"
     fi
-    if [ "$EXIT_CODE" -eq 2 ] || [ "$EXIT_CODE" -eq 3 ]; then
+
+    if [ $((EXIT_CODE & 2)) -ne 0 ]; then
       APPROVED_COUNT=$(echo "$RESULT" | jq -r '.approved_count // 0')
       echo "[watcher] ACTION: $APPROVED_COUNT approved issue(s) — resume pipeline from QA"
+    fi
+
+    if [ $((EXIT_CODE & 4)) -ne 0 ]; then
+      RESUMED_COUNT=$(echo "$RESULT" | jq -r '.intake_resumed_count // 0')
+      echo "[watcher] ACTION: $RESUMED_COUNT intake-resumed issue(s) — resume intake with clarifications"
     fi
   fi
 

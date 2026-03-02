@@ -190,6 +190,29 @@ Then read `.claude/rules/qa.md`, `.claude/rules/developer.md`,
 `.claude/rules/git-agent.md` in order, and execute the post-approval
 pipeline for that issue starting from QA Test Writing.
 
+**`[watcher] ACTION: N intake-resumed issue(s) — resume intake with clarifications`**
+For each issue in `.intake_resumed[]`:
+```bash
+ISSUE_NUMBER=<number from .intake_resumed[].number>
+export ISSUE_NUMBER
+
+# Remove pipeline:blocked — the human has answered the intake questions
+gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --remove-label "pipeline:blocked"
+
+# Post a resumption comment so the issue shows the watcher acted
+gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
+  --body "<!-- pipeline-agent:watcher-intake-resume -->
+## 📋 Intake Resuming
+
+Human has replied to clarifying questions. Resuming intake to finalise requirements.
+
+The Intake Agent will read the clarifications and post structured requirements."
+```
+Then read `.claude/rules/intake.md` in full and re-invoke the Intake Agent
+for that issue. The agent will detect the existing questions + human reply
+and proceed directly to writing the final requirements comment (Step 5),
+skipping the question-asking step.
+
 To override timing or force polling mode for testing:
 ```bash
 # Webhook mode with short idle timeout
