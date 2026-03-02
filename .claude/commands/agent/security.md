@@ -10,6 +10,6 @@ source .claude/config.sh
 ISSUE_NUMBER=$ARGUMENTS
 ```
 
-Follow all steps in the security rules: read `docs/SECURITY.md`, get the diff,
-run automated scans, post the security report, update `docs/SECURITY.md`, and
+Follow all steps in the security rules: read `$PIPELINE_DOCS_DIR/SECURITY.md`, get the diff,
+run automated scans, post the security report, update `$PIPELINE_DOCS_DIR/SECURITY.md`, and
 update the project status.

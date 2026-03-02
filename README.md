@@ -172,11 +172,17 @@ If `project` is not listed, re-run `gh auth refresh -s project`.
 
 ```bash
 cp -r fertiger/.claude your-project/.claude
+cp -r fertiger/scripts your-project/scripts
+cp -r fertiger/docs your-project/docs
 cp fertiger/settings.json your-project/settings.json
 cp fertiger/FEATURE-REQUEST.md your-project/FEATURE-REQUEST.md
 ```
 
 Or use fertiger as a GitHub template repository.
+
+> **Note:** The `docs/` directory contains blank templates — your pipeline agents
+> will populate them as features ship. The `.fertiger/` directory in this repo
+> contains fertiger's own accumulated history and is not copied to your project.
 
 ### Step 4 — Run the Setup Agent
 
@@ -264,6 +270,18 @@ claude "/agent:qa-validate 42"
 ```bash
 claude "/pipeline:report"
 ```
+
+### Update the pipeline framework
+
+Pull the latest agent rules, scripts, and commands from the fertiger upstream without
+touching your project's docs, config, or source code:
+
+```bash
+claude "/pipeline:update"
+```
+
+This is safe to run at any time. Your `docs/`, `.claude/config.sh`, and all source
+files are never touched.
 
 ### YOLO Mode — Full Auto (God Help You)
 
@@ -375,25 +393,41 @@ After Solution Design, the pipeline posts the full implementation plan and sets 
 your-project/
 ├── .claude/
 │   ├── config.sh              ← your project config (gitignored, written by setup)
-│   ├── commands/
-│   │   ├── pipeline.md        ← slash command definitions
-│   │   └── SETUP.md           ← /pipeline:setup reference guide
+│   ├── commands/pipeline/
+│   │   ├── setup.md           ← /pipeline:setup
+│   │   ├── watch.md           ← /pipeline:watch
+│   │   ├── start.md           ← /pipeline:start
+│   │   ├── status.md          ← /pipeline:status
+│   │   ├── resume.md          ← /pipeline:resume
+│   │   ├── report.md          ← /pipeline:report
+│   │   ├── retry-dev.md       ← /pipeline:retry-dev
+│   │   └── update.md          ← /pipeline:update  ← pull latest framework files
 │   └── rules/
-│       ├── setup.md           ← one-time project provisioning agent  ← NEW
+│       ├── setup.md           ← one-time project provisioning agent
 │       ├── git-watcher.md     ← entry point, polls for ready issues
 │       ├── intake.md          ← requirements + acceptance criteria
-│       ├── legal.md           ← GDPR compliance + branch creation
+│       ├── eu-compliance.md   ← EU regulatory review + branch creation
 │       ├── architect.md       ← architecture decisions (ADR format)
 │       ├── solution-design.md ← file-by-file implementation plan
 │       ├── qa.md              ← test writing (TDD) + validation
 │       ├── developer.md       ← parallel code writing swarm
 │       ├── code-quality.md    ← lint, typecheck, manual review
 │       ├── security.md        ← OWASP + vulnerability audit
-│       └── git-agent.md       ← final commit + PR creation
+│       ├── git-agent.md       ← final commit + PR creation
+│       └── pipeline-update.md ← /pipeline:update agent rules
+├── scripts/pipeline/          ← reusable bash utilities for agents
+│   ├── set-status.sh          ← update project board status
+│   ├── checkout-branch.sh     ← fetch + checkout the feature branch
+│   ├── detect-stack.sh        ← detect language, test/lint/build commands
+│   ├── run-tests.sh           ← run tests with optional filter
+│   ├── swarm-lock.sh          ← file ownership for parallel dev agents
+│   ├── check-deps.sh          ← check for missing file dependencies
+│   ├── triage.sh              ← classify issue complexity
+│   └── SCRIPTS.md             ← script registry (check here before writing bash)
 ├── docs/
-│   ├── ARCHITECTURE.md        ← living architecture record (Architect Agent)
-│   ├── COMPLIANCE.md          ← GDPR data inventory + compliance log (Legal Agent)
-│   └── SECURITY.md            ← security posture + audit log (Security Agent)
+│   ├── ARCHITECTURE.md        ← blank template (populated by Architect Agent per feature)
+│   ├── COMPLIANCE.md          ← blank template (populated by EU Compliance Agent per feature)
+│   └── SECURITY.md            ← blank template (populated by Security Agent per feature)
 ├── FEATURE-REQUEST.md         ← GitHub Issue template
 ├── CLAUDE.md                  ← pipeline configuration (checked in)
 └── settings.json              ← enables parallel agent teams
@@ -431,22 +465,29 @@ Adapt the agent rules in `.claude/rules/` if your stack differs. The agents are 
 
 ## Living Documentation (`/docs`)
 
-Three files in `/docs` accumulate project knowledge across every feature that ships.
+Three files accumulate project knowledge across every feature that ships.
 They are committed to each feature branch and merged into `main` with the PR — so `main`
 always reflects the current state of the project.
 
 | File | Owner | What It Tracks |
 |------|-------|----------------|
-| `docs/ARCHITECTURE.md` | Architect Agent | System overview, component map, ADR log |
-| `docs/COMPLIANCE.md` | Legal Agent | Personal data inventory, GDPR decisions, compliance log |
-| `docs/SECURITY.md` | Security Agent | Auth patterns, security posture, audit log |
+| `ARCHITECTURE.md` | Architect Agent | System overview, component map, ADR log |
+| `COMPLIANCE.md` | EU Compliance Agent | Personal data inventory, GDPR decisions, compliance log |
+| `SECURITY.md` | Security Agent | Auth patterns, security posture, audit log |
 
 Agents read these files at the start of each run to build context before working on a
 new issue — so every agent knows what decisions were made before it arrived. They update
 them at the end of each run so the next agent finds them in better shape than before.
 
-The files ship with placeholder content. After your first feature is merged, they will
-contain real data.
+**Where these files live** is controlled by `PIPELINE_DOCS_DIR` in `.claude/config.sh`.
+The default for consumer projects is `docs/` — so you get `docs/ARCHITECTURE.md` etc.
+The `docs/` files that ship with fertiger are blank templates. After your first feature
+is merged, they will contain real data about your project.
+
+> **If you're hacking on fertiger itself:** `PIPELINE_DOCS_DIR` is set to `.fertiger/`
+> in fertiger's own `config.sh`, so agents write to `.fertiger/ARCHITECTURE.md` etc.
+> This keeps fertiger's own ADR history separate from the blank templates in `docs/`
+> that consumers receive when they clone the repo.
 
 ---
 

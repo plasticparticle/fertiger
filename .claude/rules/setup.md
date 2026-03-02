@@ -255,6 +255,11 @@ export CODE_REVIEW_OPTION_ID="$CODE_REVIEW_OPTION_ID"
 export SECURITY_REVIEW_OPTION_ID="$SECURITY_REVIEW_OPTION_ID"
 export READY_FOR_MERGE_OPTION_ID="$READY_FOR_MERGE_OPTION_ID"
 export DONE_OPTION_ID="$DONE_OPTION_ID"
+
+# Docs directory — where agents write COMPLIANCE.md, SECURITY.md, ARCHITECTURE.md
+# Default: "docs" for consumer projects
+# Set to ".fertiger" if this repo IS fertiger itself (keeps framework history separate from templates)
+export PIPELINE_DOCS_DIR="docs"
 EOF
 ```
 

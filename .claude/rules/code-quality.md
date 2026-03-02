@@ -143,7 +143,7 @@ BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 git diff main...HEAD -- src/ tests/
 ```
 
-Also read `docs/SECURITY.md` before reviewing. It describes the established auth patterns,
+Also read `$PIPELINE_DOCS_DIR/SECURITY.md` before reviewing. It describes the established auth patterns,
 known risk areas, and past findings — use it to calibrate your review and spot regressions.
 
 ## Step 2: Run Automated Scans
@@ -198,9 +198,9 @@ EOF
 )"
 ```
 
-## Step 4: Update docs/SECURITY.md
+## Step 4: Update $PIPELINE_DOCS_DIR/SECURITY.md
 
-Read the current `docs/SECURITY.md`, then update it:
+Read the current `$PIPELINE_DOCS_DIR/SECURITY.md`, then update it:
 
 **Auth & Authorisation Patterns** — if this feature introduced or changed how auth works,
 update this section to reflect the current pattern.
@@ -219,7 +219,7 @@ If a new risk area was identified (even if not blocking), add a row.
 
 Commit to the feature branch:
 ```bash
-git add docs/SECURITY.md
+git add $PIPELINE_DOCS_DIR/SECURITY.md
 git commit -m "docs(security): update posture for issue #$ISSUE_NUMBER"
 git push origin $BRANCH_NAME
 ```

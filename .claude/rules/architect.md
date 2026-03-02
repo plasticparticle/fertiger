@@ -53,7 +53,7 @@ BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 
 ## Step 3: Explore the Codebase
 Read relevant files to understand current patterns:
-- **`docs/ARCHITECTURE.md`** — the running architecture record for this project (start here)
+- **`$PIPELINE_DOCS_DIR/ARCHITECTURE.md`** — the running architecture record for this project (start here)
 - Key source files related to the feature area
 - Existing API patterns, data models, service structure
 - Infrastructure config (`azure/`, `terraform/`, `.github/`)
@@ -114,9 +114,9 @@ EOF
 scripts/pipeline/set-status.sh SOLUTION_DESIGN
 ```
 
-## Step 5: Update docs/ARCHITECTURE.md
+## Step 5: Update $PIPELINE_DOCS_DIR/ARCHITECTURE.md
 
-Read the current `docs/ARCHITECTURE.md`, then update it to reflect this feature:
+Read the current `$PIPELINE_DOCS_DIR/ARCHITECTURE.md`, then update it to reflect this feature:
 
 **System Overview** — update if this feature changes the high-level description of the system.
 
@@ -141,7 +141,7 @@ After editing the file, commit it to the feature branch:
 ```bash
 ISSUE_TITLE=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json title --jq '.title')
 
-git add docs/ARCHITECTURE.md
+git add $PIPELINE_DOCS_DIR/ARCHITECTURE.md
 git commit -m "docs(architecture): update for issue #$ISSUE_NUMBER — $ISSUE_TITLE"
 git push origin $BRANCH_NAME
 ```
@@ -155,4 +155,4 @@ git push origin $BRANCH_NAME
 - Keep Azure and Okta patterns consistent with the current auth setup
 - If a major new service is needed, flag complexity as HIGH and note it prominently
 - Never write implementation code — decisions and designs only
-- `docs/ARCHITECTURE.md` is the project memory — keep it accurate, not exhaustive
+- `$PIPELINE_DOCS_DIR/ARCHITECTURE.md` is the project memory — keep it accurate, not exhaustive

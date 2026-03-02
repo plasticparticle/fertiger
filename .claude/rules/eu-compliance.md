@@ -48,7 +48,7 @@ gh issue view $ISSUE_NUMBER \
   --json comments,title,body \
   | jq '.comments[] | select(.body | contains("pipeline-agent:intake"))'
 
-cat docs/COMPLIANCE.md
+cat $PIPELINE_DOCS_DIR/COMPLIANCE.md
 ```
 
 Extract from the intake comment:
@@ -293,9 +293,9 @@ EOF
 
 ---
 
-## Step 8: Update docs/COMPLIANCE.md
+## Step 8: Update $PIPELINE_DOCS_DIR/COMPLIANCE.md
 
-Read the current `docs/COMPLIANCE.md`, then append new findings.
+Read the current `$PIPELINE_DOCS_DIR/COMPLIANCE.md`, then append new findings.
 
 **Personal Data Inventory** — if this feature introduces a new category of personal data
 not already listed, add a row to the inventory table.
@@ -312,7 +312,7 @@ must be encrypted"), add it to this section.
 
 Commit to the feature branch:
 ```bash
-git add docs/COMPLIANCE.md
+git add $PIPELINE_DOCS_DIR/COMPLIANCE.md
 git commit -m "docs(compliance): update register for issue #$ISSUE_NUMBER"
 git push origin $BRANCH_NAME
 ```
@@ -416,8 +416,8 @@ gh issue edit $ISSUE_NUMBER \
 - BLOCKED is only for clear-cut prohibitions or missing lawful basis
 - Always distinguish controller vs processor obligations
 - If a regulation does not apply, state why explicitly — do not just mark NO
-- Always read `docs/COMPLIANCE.md` before assessing — standing mitigations may apply
-- Always update `docs/COMPLIANCE.md` after every run — this is the project's legal memory
+- Always read `$PIPELINE_DOCS_DIR/COMPLIANCE.md` before assessing — standing mitigations may apply
+- Always update `$PIPELINE_DOCS_DIR/COMPLIANCE.md` after every run — this is the project's legal memory
 - Never write legal advice — write engineering-actionable compliance requirements
 - Non-EU jurisdiction issues (US, Brazil, China) → flag for separate review but do not assess
 - DPO escalation is mandatory when DPIA is REQUIRED — do not skip it even for low-risk features

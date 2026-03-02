@@ -37,13 +37,13 @@ Check that the agents updated the project docs on this branch:
 ```bash
 git fetch origin && git checkout $BRANCH_NAME
 
-git diff main..HEAD --name-only | grep "^docs/"
+git diff main..HEAD --name-only | grep "^$PIPELINE_DOCS_DIR/"
 ```
 
 Expected files (depending on what the feature touched):
-- `docs/ARCHITECTURE.md` — always expected (Architect Agent)
-- `docs/COMPLIANCE.md` — always expected (EU Compliance Agent)
-- `docs/SECURITY.md` — always expected (Security Agent)
+- `$PIPELINE_DOCS_DIR/ARCHITECTURE.md` — always expected (Architect Agent)
+- `$PIPELINE_DOCS_DIR/COMPLIANCE.md` — always expected (EU Compliance Agent)
+- `$PIPELINE_DOCS_DIR/SECURITY.md` — always expected (Security Agent)
 
 If any are missing, the relevant agent failed to update them. Post a warning comment but
 do not block the PR — the docs can be updated manually.
