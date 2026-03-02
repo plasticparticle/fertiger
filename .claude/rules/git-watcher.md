@@ -1,12 +1,12 @@
 # Git Watcher Agent Rules
 
 ## Role
-You are the Git Watcher Agent — the pipeline's entry point. You poll the
+You are the Git Watcher Agent — the pipeline's entry point. You monitor the
 GitHub Project for stories that are ready to be developed, then orchestrate
 the full pipeline for each one.
 
 ## Trigger
-Invoked manually via `/pipeline:watch` or on a schedule.
+Invoked manually via `/pipeline:watch`.
 
 ---
 
@@ -148,17 +148,19 @@ gh issue view $ISSUE_NUMBER \
 Pass the issue number and content to the Intake Agent.
 The Intake Agent takes over from here.
 
-## Step 6: Watch for Approval (Polling Mode)
+## Step 6: Watch for Events
 
-If running in watch mode (`/pipeline:watch`), run the pre-built watch loop.
-It polls every minute, resets idle timer when work is found, and stops
-after 8 hours of inactivity:
+If running in watch mode (`/pipeline:watch`), run the pre-built watcher script.
+It automatically uses webhook mode (event-driven, fires within seconds) when
+`gh webhook forward` and `python3` are available; otherwise falls back to
+60-second polling. The output format is identical in both modes.
 
 ```bash
-bash .claude/scripts/watch.sh
+bash .claude/scripts/webhook-watch.sh
 ```
 
-The script emits `[watcher] ACTION: ...` lines when issues are found.
+The script emits `[watcher] ACTION: ...` lines when issues are found, preceded
+by a structured JSON object (same format as `poll-once.sh` output).
 Handle each case as follows:
 
 **`[watcher] ACTION: N ready issue(s) — hand off to intake pipeline`**
@@ -171,7 +173,7 @@ For each issue in `.approved[]`:
 ISSUE_NUMBER=<number from .approved[].number>
 export ISSUE_NUMBER
 
-# Remove the approved label so this issue isn't picked up again next poll
+# Remove the approved label so this issue isn't picked up again
 gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --remove-label "pipeline:approved"
 
 # Post a resumption comment
@@ -188,13 +190,19 @@ Then read `.claude/rules/qa.md`, `.claude/rules/developer.md`,
 `.claude/rules/git-agent.md` in order, and execute the post-approval
 pipeline for that issue starting from QA Test Writing.
 
-To override timing for testing:
+To override timing or force polling mode for testing:
 ```bash
-POLL_INTERVAL=60 MAX_IDLE_SECONDS=600 bash .claude/scripts/watch.sh
+# Webhook mode with short idle timeout
+WEBHOOK_PORT=9867 MAX_IDLE_SECONDS=300 bash .claude/scripts/webhook-watch.sh
+
+# Force polling mode explicitly
+POLL_INTERVAL=30 MAX_IDLE_SECONDS=300 bash .claude/scripts/watch.sh
 ```
 
-## Polling Interval
-Defined in `.claude/scripts/watch.sh` — default 60s poll, 28800s (8h) idle timeout.
+## Watcher Scripts
+- `.claude/scripts/webhook-watch.sh` — webhook-first watcher (default, auto-fallback to polling)
+- `.claude/scripts/watch.sh` — polling-only watcher (60s interval, explicit fallback)
+- `.claude/scripts/poll-once.sh` — single poll, used by watch.sh and as startup check in webhook-watch.sh
 
 ## Error Handling
 If any agent in the pipeline sets `pipeline:blocked` label:

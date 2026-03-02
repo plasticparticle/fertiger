@@ -1,22 +1,24 @@
-Start the Git Watcher Agent. Polls the GitHub Project every minute for
-issues with status "Ready" or label "pipeline:ready". Processes each one
-found through the full pipeline.
-Stops after 8 hours of no new issues.
+Start the Git Watcher Agent. Automatically uses webhook mode (event-driven,
+zero-latency) when `gh webhook forward` and `python3` are available — falls
+back to polling (60-second interval) otherwise. Mode selection is automatic.
 
 Before executing, read `.claude/rules/git-watcher.md` in full.
 
-Then start the watcher using the pre-built script:
+Then start the watcher:
 ```bash
 source .claude/config.sh
+bash .claude/scripts/webhook-watch.sh
+```
+
+The script handles mode detection and fallback automatically.
+To force polling mode explicitly:
+```bash
 bash .claude/scripts/watch.sh
 ```
 
-The watch loop is fully defined in `.claude/scripts/watch.sh`.
-Do NOT reconstruct polling logic inline — use the script.
-
 To override timing (e.g. for quick testing):
 ```bash
-POLL_INTERVAL=60 MAX_IDLE_SECONDS=300 bash .claude/scripts/watch.sh
+WEBHOOK_PORT=9867 MAX_IDLE_SECONDS=300 bash .claude/scripts/webhook-watch.sh
 ```
 
-No issue number is required — the watcher polls autonomously.
+No issue number is required — the watcher runs autonomously.
