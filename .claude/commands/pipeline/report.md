@@ -8,19 +8,23 @@ Usage: `/pipeline:report` — no arguments needed.
 
 ## Step 1: Fetch Project Data
 
+The `gh project item-list` output can be large (multi-KB JSON). Save to a temp
+file before piping to jq to avoid silent truncation:
+
 ```bash
 source .claude/config.sh
 
-# All project items with their status
+# Save project items to temp file, then parse
 gh project item-list $GITHUB_PROJECT_NUMBER \
   --owner $GITHUB_PROJECT_OWNER \
   --format json \
-  --limit 100 \
-  | jq '[.items[] | select(.content.number) | {
-      number: .content.number,
-      title: .title,
-      status: (.status // "No Status")
-    }] | sort_by(.number)'
+  --limit 100 > /tmp/pipeline-items.json
+
+jq '[.items[] | select(.content.number) | {
+    number: .content.number,
+    title: .title,
+    status: (.status // "No Status")
+  }] | sort_by(.number)' /tmp/pipeline-items.json
 
 # Issues currently blocked
 gh issue list \
