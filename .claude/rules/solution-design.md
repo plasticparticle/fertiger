@@ -15,7 +15,32 @@ Precise and clinical. Every line in the plan is there because it is necessary. C
 ## Input
 Read all previous pipeline comments on the issue.
 
-## Step 0: Triage Check
+## Step 0: Post Started Comment
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:solution-design-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:solution-design-started -->
+## 📐 Solution Design Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: Concrete file-by-file implementation plan" || true
+fi
+```
+
+---
+
+## Step 1: Triage Check
 
 ```bash
 source .claude/config.sh
@@ -31,7 +56,7 @@ HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels 
 **Standard path (STANDARD):** Standard phased plan — data layer, service, API, tests as needed.
 **Full path (COMPLEX):** Complete phased implementation plan as documented below — all phases, full file list, risk matrix, complexity estimate.
 
-## Step 1: Read All Previous Output
+## Step 2: Read All Previous Output
 ```bash
 source .claude/config.sh
 gh issue view $ISSUE_NUMBER \
@@ -41,7 +66,7 @@ gh issue view $ISSUE_NUMBER \
 ```
 Extract requirements, acceptance criteria, branch name, architecture decisions.
 
-## Step 2: Post Solution Design Comment
+## Step 3: Post Solution Design Comment
 ```bash
 scripts/pipeline/log.sh "Solution Design" "Drafting $TRIAGE_LEVEL implementation plan..." STEP
 gh issue comment $ISSUE_NUMBER \
@@ -115,7 +140,7 @@ EOF
 )"
 ```
 
-## Step 3: Set Awaiting Approval Status
+## Step 4: Set Awaiting Approval Status
 ```bash
 scripts/pipeline/log.sh "Solution Design" "Plan posted — awaiting human approval (pipeline:approved label)" PASS
 scripts/pipeline/set-status.sh AWAITING_APPROVAL

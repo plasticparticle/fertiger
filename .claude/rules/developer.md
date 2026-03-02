@@ -19,26 +19,36 @@ The team lead spawns you with a specific file assignment.
 
 ---
 
-## Step 0: Announce Your Start
+## Step 0: Post Started Comment
 
-Before doing anything else, post a comment so the issue shows who picked up which files:
+Before doing anything else, post a heartbeat so the issue shows this agent is active:
 
 ```bash
 source .claude/config.sh
 scripts/pipeline/log.sh "Dev[$AGENT_NAME]" "Starting — Issue #$ISSUE_NUMBER" AGENT
 
-gh issue comment $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --body "<!-- pipeline-agent:dev-$AGENT_NAME-start -->
-## 💻 Dev Agent ($AGENT_NAME) — Starting
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq --arg name "$AGENT_NAME" '[.comments[].body | test("pipeline-agent:dev-" + $name + "-started")] | any' 2>/dev/null || echo "false")
 
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:dev-$AGENT_NAME-started -->
+## 💻 Dev Agent ($AGENT_NAME) — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
 **Assigned area:** [brief description, e.g. \"Core pipeline scripts\"]
 
 **Files I will implement:**
 [list your assigned files, one per line with - prefix]
 
-**Branch:** \`$BRANCH_NAME\`"
+**Branch:** \`$BRANCH_NAME\`" || true
+fi
 ```
+
+Progress updates: post one update per solution design phase (Data Layer / Service Layer / API Layer / UI Layer) as each phase completes — never per individual file.
 
 ---
 

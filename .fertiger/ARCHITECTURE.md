@@ -25,6 +25,12 @@ A shared executable layer lives under `scripts/pipeline/` — POSIX-compatible b
 that any agent can source or invoke for stack detection, test running, swarm coordination,
 and dependency checking.
 
+Every pipeline-issue-driven agent (Intake through Git Agent) begins its run by posting a
+`<!-- pipeline-agent:[name]-started -->` comment to the GitHub Issue. This is the first
+action before triage or any substantive work. Long-running agents append timestamped progress
+lines to this comment at logical milestones. The started comment is fire-and-forget: failure
+to post never aborts the agent's primary work. A duplicate guard prevents re-posting on restart.
+
 ---
 
 ## Component Map
@@ -56,6 +62,36 @@ and dependency checking.
 ## Architecture Decision Records
 
 _ADRs are appended here by the Architect Agent on each feature. Most recent first._
+
+### ADR-013: setup.md and pipeline-update.md use stdout-only heartbeat — Issue #7 (2026-03-02)
+- **Context:** `setup.md` and `pipeline-update.md` run interactively with no `$ISSUE_NUMBER`. They cannot post to a GitHub Issue.
+- **Decision:** These agents print a started message to stdout only (`echo "⚙️ [Agent] — Started at $(date -u)"`), not to a GitHub Issue comment. No duplicate guard is needed.
+- **Rationale:** Consistency with the spirit of the requirement (visibility that the agent has started) without inapplicable GitHub API calls.
+- **Consequences:** These agents do not follow the full `<!-- pipeline-agent:[name]-started -->` pattern. This is the documented exception.
+
+### ADR-012: Progress updates are edits to the started comment, not new comments — Issue #7 (2026-03-02)
+- **Context:** REQ-002 requires progress updates at logical milestones. Posting new comments for each update floods the issue thread.
+- **Decision:** Progress updates are appended to the started comment body via `gh api --method PATCH /repos/$GITHUB_REPO/issues/comments/$COMMENT_ID`. Agent captures the started comment URL from `gh issue comment` output and extracts the numeric ID as the last URL path segment.
+- **Rationale:** Keeps the issue thread readable — one live-updating status comment per agent. Consistent with REQ-002.
+- **Consequences:** Agents posting progress updates must store the started comment ID. The PATCH body includes the full updated text; agents accumulate progress lines across milestones.
+
+### ADR-011: Duplicate guard uses `test("[name]-started")` jq pattern — Issue #7 (2026-03-02)
+- **Context:** REQ-005 requires a duplicate guard before posting a started comment. The project's established jq safety rule prohibits `contains("<!--")` due to shell escape issues with `!`.
+- **Decision:** Each agent's duplicate guard uses `jq '[.comments[].body | test("[name]-started")] | any'`. Early-exits the started comment block (not the whole agent) when the result is `true`.
+- **Rationale:** Consistent with the project-wide jq safety rule (CLAUDE.md, ADR-002). `test()` is reliable regardless of HTML comment content.
+- **Consequences:** All 10 pipeline agents include this guard in their new Step 0. REQ-004 (fire-and-forget) is satisfied: guard exits only the started comment block, never the agent's primary work.
+
+### ADR-010: Developer agent's existing announce pattern converges into the standard heartbeat — Issue #7 (2026-03-02)
+- **Context:** `.claude/rules/developer.md` already has `Step 0: Announce Your Start` with marker `<!-- pipeline-agent:dev-$AGENT_NAME-start -->`. This diverges from the standard `-started` suffix and lacks a duplicate guard.
+- **Decision:** Replace the announce step with the standard heartbeat pattern. Use marker `<!-- pipeline-agent:dev-$AGENT_NAME-started -->`. Add duplicate guard. Preserve existing announce content (assigned area, file list, branch) inside the started comment template.
+- **Rationale:** Convergence eliminates a divergent pattern. Consistent `-started` suffix enables uniform detection. Duplicate guard satisfies REQ-005.
+- **Consequences:** Downstream detection of `pipeline-agent:dev-$AGENT_NAME-start` (without `d`) must update to `-started`. Git Agent completeness check uses `test("pipeline-agent:dev-[^s]")` — the `[^s]` correctly excludes `-started` (starts with `s`); no regression.
+
+### ADR-009: Started comment inserted as Step 0 in every agent, before triage — Issue #7 (2026-03-02)
+- **Context:** Every agent needs a heartbeat as its first action. Most agents use Step 0 for triage. The heartbeat must precede triage.
+- **Decision:** Where an agent has an existing `Step 0`, renumber all steps up by one (Step 0 → Step 1, Step 1 → Step 2, etc.) and insert the heartbeat as the new `Step 0: Post Started Comment`. Where no Step 0 exists, insert before the existing Step 1.
+- **Rationale:** Renumbering preserves step semantics. Two sequential Step 0s would be invalid. Applies to all 10 pipeline-issue-driven agents; `setup.md` and `pipeline-update.md` use ADR-013 exception.
+- **Consequences:** All existing step-number references within each rules file must be verified post-edit. `code-quality.md` contains two agents (Code Quality + Security) — both receive their own started comment with distinct markers (`code-quality-started`, `security-started`).
 
 ### ADR-008: POSIX sh compatibility as the primary portability constraint — Issue #3 (2026-02-26)
 - **Context:** Issue #3 requires Linux and macOS compatibility for pipeline scripts. macOS ships bash 3.x (pre-associative arrays) and the default shell is zsh.

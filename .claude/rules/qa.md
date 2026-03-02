@@ -14,7 +14,32 @@ Professional, methodical, clear. State results as facts, not judgements. Describ
 
 ---
 
-## Step 0: Triage Check
+## Step 0: Post Started Comment
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:qa-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:qa-started -->
+## 🧪 QA Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: QA stage — test authoring (Mode 1) or validation (Mode 2)" || true
+fi
+```
+
+---
+
+## Step 1: Triage Check
 
 ```bash
 source .claude/config.sh
@@ -98,6 +123,8 @@ Additionally, scan the solution design file list for any of these patterns and a
 Tests **must fail** at this point — no implementation exists yet. That is correct and expected.
 
 ### Step 5: Commit Tests
+
+Post a progress update before committing — unit suite complete, pushing contract.
 
 ```bash
 scripts/pipeline/log.sh "QA" "Committing tests to branch..." STEP

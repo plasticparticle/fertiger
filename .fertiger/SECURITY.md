@@ -28,6 +28,8 @@ _Patterns all developers must follow, extracted from past security reviews._
 - Agent rules files must never contain secrets, API keys, or credentials
 - `config.sh` is gitignored and must never be committed
 - All `gh` commands use `--repo $GITHUB_REPO` to scope operations to the correct repository
+- All `gh issue comment` heartbeat calls use `|| true` fire-and-forget to prevent pipeline failures from exposing internal state via error messages
+- jq patterns in agent rules must use `test()` not `contains()` to avoid bash `!` escape issues
 
 ---
 
@@ -49,5 +51,6 @@ _One row per issue processed. Most recent first._
 
 | Issue | Feature | Result | Critical | High | Medium | Low | Date |
 |-------|---------|--------|----------|------|--------|-----|------|
+| #7 | Pipeline Agents — Post Started Heartbeat Comment | PASS | 0 | 0 | 0 | 0 | 2026-03-02 |
 | #4 | Pipeline Agents — Pre-Research Triage | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |
 | #1 | EU Compliance Agent — Requirements | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |
