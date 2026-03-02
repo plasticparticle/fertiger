@@ -49,5 +49,6 @@ _One row per issue processed. Most recent first._
 
 | Issue | Feature | Result | Critical | High | Medium | Low | Date |
 |-------|---------|--------|----------|------|--------|-----|------|
+| #5 | New Agent — Business Value, Customer Impact & Complexity Estimator | PASS | 0 | 0 | 0 | 0 | 2026-03-02 |
 | #4 | Pipeline Agents — Pre-Research Triage | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |
 | #1 | EU Compliance Agent — Requirements | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |
