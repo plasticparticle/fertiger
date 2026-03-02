@@ -10,6 +10,16 @@ Invoked via `/pipeline:setup`.
 
 ---
 
+## Step 0: Print Started Message
+
+No issue number context — stdout only:
+
+```bash
+echo "⚙️  Setup Agent — Starting at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+```
+
+---
+
 ## Step 1: Verify GitHub CLI Auth
 
 ```bash

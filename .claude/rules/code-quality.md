@@ -14,7 +14,57 @@ Professional, direct, fair. A violation is a violation; a pass is a pass. Give s
 ## Trigger
 Issue project status is `Code Review`.
 
-## Step 0: Triage Check
+## Step 0: Post Started Comments
+
+This file covers two sequential agents. Both heartbeats are posted here, before any work begins.
+
+### Code Quality Agent
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:code-quality-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:code-quality-started -->
+## 🔬 Code Quality Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: Code quality review — lint, type-check, manual review" || true
+fi
+```
+
+### Security Agent
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:security-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:security-started -->
+## 🔒 Security Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: Security audit — automated scans and OWASP manual review" || true
+fi
+```
+
+## Step 1: Triage Check
 
 ```bash
 source .claude/config.sh
@@ -31,7 +81,7 @@ scripts/pipeline/log.sh "Code Quality" "Triage: $TRIAGE_LEVEL" STEP
 **Standard path (STANDARD):** Run lint and type-check, review changed files — default.
 **Full path (COMPLEX):** Complete automated checks plus full manual review checklist as documented below.
 
-## Step 1: Checkout and Run Automated Checks
+## Step 2: Checkout and Run Automated Checks
 ```bash
 source .claude/config.sh
 BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
@@ -41,13 +91,13 @@ npx tsc --noEmit
 npm run test:coverage
 ```
 
-## Step 2: Review Changed Files Only
+## Step 3: Review Changed Files Only
 ```bash
 git diff main...HEAD --name-only
 ```
 Review only files in this diff.
 
-## Step 3: Post Quality Report
+## Step 4: Post Quality Report
 ```bash
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
@@ -88,7 +138,7 @@ EOF
 )"
 ```
 
-## Step 4: Update Status
+## Step 5: Update Status
 ```bash
 # PASS → Security Review
 scripts/pipeline/set-status.sh SECURITY_REVIEW
@@ -127,7 +177,11 @@ Precise and professionally pessimistic. Distinguish real blocking issues from th
 ## Trigger
 Issue project status is `Security Review`.
 
-## Step 0: Triage Check
+_(Started comment is posted at the top of this file — Step 0 above.)_
+
+---
+
+## Step 1: Triage Check
 
 ```bash
 source .claude/config.sh
@@ -144,7 +198,7 @@ scripts/pipeline/log.sh "Security" "Triage: $TRIAGE_LEVEL" STEP
 **Standard path (STANDARD):** Automated scans plus targeted manual review of auth and data handling.
 **Full path (COMPLEX):** Complete security audit as documented below — all automated scans and full OWASP manual review.
 
-## Step 1: Get the Diff and Read Security Context
+## Step 2: Get the Diff and Read Security Context
 ```bash
 source .claude/config.sh
 BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
@@ -154,14 +208,14 @@ git diff main...HEAD -- src/ tests/
 Also read `$PIPELINE_DOCS_DIR/SECURITY.md` before reviewing. It describes the established auth patterns,
 known risk areas, and past findings — use it to calibrate your review and spot regressions.
 
-## Step 2: Run Automated Scans
+## Step 3: Run Automated Scans
 ```bash
 scripts/pipeline/log.sh "Security" "Running automated scans (npm audit, semgrep)..." STEP
 npm audit --audit-level=moderate
 npx semgrep --config auto src/   # if available
 ```
 
-## Step 3: Post Security Report
+## Step 4: Post Security Report
 ```bash
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
@@ -207,7 +261,7 @@ EOF
 )"
 ```
 
-## Step 4: Update $PIPELINE_DOCS_DIR/SECURITY.md
+## Step 5: Update $PIPELINE_DOCS_DIR/SECURITY.md
 
 Read the current `$PIPELINE_DOCS_DIR/SECURITY.md`, then update it:
 
@@ -233,7 +287,7 @@ git commit -m "docs(security): update posture for issue #$ISSUE_NUMBER"
 git push origin $BRANCH_NAME
 ```
 
-## Step 5: Update Status
+## Step 6: Update Status
 ```bash
 # PASS → Ready for Merge
 scripts/pipeline/set-status.sh READY_FOR_MERGE

@@ -17,7 +17,32 @@ Read comments containing:
 - `<!-- pipeline-agent:intake -->` — requirements and acceptance criteria
 - `<!-- pipeline-agent:eu-compliance -->` — branch name, verdict, and compliance constraints
 
-## Step 0: Triage Check
+## Step 0: Post Started Comment
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:architect-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:architect-started -->
+## 🏗️ Architect Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: Architecture decisions and ADR documentation" || true
+fi
+```
+
+---
+
+## Step 1: Triage Check
 
 ```bash
 source .claude/config.sh
@@ -33,7 +58,7 @@ HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels 
 **Standard path (STANDARD):** Standard architecture review — check affected services, data model changes, API contracts.
 **Full path (COMPLEX):** Complete analysis as documented below — full codebase exploration, all ADR sections, risk and scalability assessment.
 
-## Step 1: Read Previous Agent Output
+## Step 2: Read Previous Agent Output
 ```bash
 source .claude/config.sh
 gh issue view $ISSUE_NUMBER \
@@ -47,23 +72,19 @@ These constraints (e.g. `DATA_RESIDENCY`, `ENCRYPTION_AT_REST`) must be reflecte
 in architecture decisions — particularly in Azure region selection, storage choices,
 and data handling patterns.
 
-## Step 2: Checkout the Feature Branch
+## Step 3: Checkout the Feature Branch
 ```bash
 BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 ```
 
-## Step 3: Explore the Codebase
-```bash
-scripts/pipeline/log.sh "Architect" "Exploring codebase — triage: $TRIAGE_LEVEL..." STEP
-```
-
+## Step 4: Explore the Codebase
 Read relevant files to understand current patterns:
 - **`$PIPELINE_DOCS_DIR/ARCHITECTURE.md`** — the running architecture record for this project (start here)
 - Key source files related to the feature area
 - Existing API patterns, data models, service structure
 - Infrastructure config (`azure/`, `terraform/`, `.github/`)
 
-## Step 4: Post Architecture Decisions Comment
+## Step 5: Post Architecture Decisions Comment
 ```bash
 scripts/pipeline/log.sh "Architect" "Posting architecture decisions (ADRs)..." STEP
 gh issue comment $ISSUE_NUMBER \
@@ -121,7 +142,7 @@ scripts/pipeline/set-status.sh SOLUTION_DESIGN
 scripts/pipeline/log.sh "Architect" "Complete — handed off to Solution Design" PASS
 ```
 
-## Step 5: Update $PIPELINE_DOCS_DIR/ARCHITECTURE.md
+## Step 6: Update $PIPELINE_DOCS_DIR/ARCHITECTURE.md
 
 Read the current `$PIPELINE_DOCS_DIR/ARCHITECTURE.md`, then update it to reflect this feature:
 
