@@ -46,12 +46,13 @@ No local state files. No Slack bots. No scripts that only work on Kevin's laptop
 
 ### The Agents
 
-Eleven specialized Claude agents form an assembly line for your features:
+Twelve specialized Claude agents form an assembly line for your features:
 
 | Agent | What It Does | What It Replaces |
 |-------|-------------|-----------------|
 | **Git Watcher** | Polls GitHub Project for ready stories | Your scrum master |
 | **Intake** | Clarifies requirements, writes acceptance criteria | Your BA |
+| **Estimator** | Business value scores, customer impact, T-shirt sizing, enterprise comparison | Your product manager's spreadsheet |
 | **Legal** | GDPR assessment, compliance check | Your legal counsel (the nervous one) |
 | **Architect** | ADR-format architecture decisions | Your solution architect |
 | **Solution Design** | File-by-file implementation plan | Your tech lead's planning sessions |
@@ -72,6 +73,8 @@ The pipeline includes two human checkpoints — because even we think someone sh
 [GIT WATCHER] detects issue with status "Ready"
       ↓
 [INTAKE]       asks clarifying questions → posts requirements comment
+      ↓
+[ESTIMATOR]    business value + complexity assessment
       ↓
 [LEGAL]        GDPR check → creates feature branch
       ↓
@@ -243,6 +246,54 @@ claude "/pipeline:start 42"
 claude "/pipeline:status 42"
 ```
 
+### Watch agent heartbeat in real time
+
+Every agent writes a timestamped progress line to `/tmp/pipeline.log` as it works.
+Open a second terminal and tail it:
+
+```bash
+tail -n 40 -f /tmp/pipeline.log
+```
+
+Sample output:
+```
+[13:01:54Z] 🤖 [Intake] Starting — Issue #7
+[13:01:55Z]  ▸  [Intake] Reading requirements...
+[13:02:01Z]  ✅ [Intake] Complete — requirements posted, handing off to EU Compliance
+[13:02:03Z] 🤖 [EU Compliance] Starting — Issue #7
+[13:02:04Z]  ▸  [EU Compliance] Triage: STANDARD
+[13:02:05Z]  ▸  [EU Compliance] Running regulatory triage across 16 regulations...
+```
+
+To use a different log path, set `PIPELINE_LOG_FILE` in `.claude/config.sh`.
+
+> [!NOTE]
+>
+> ### `/pipeline:log` — It Works. But At What Cost.
+>
+> There is also a slash command that does this for you:
+>
+> ```bash
+> claude "/pipeline:log"
+> ```
+>
+> It opens the log, tails it, and shows you exactly what the agents are doing.
+> It is convenient. It is also Claude Code reading a file and narrating the output at you,
+> which means **every line of log it reads costs tokens**. Every `▸ Running triage...`
+> you witness is a small transaction against your Anthropic account. The agents are
+> working, and you are paying Claude to watch them work, like hiring a butler to watch
+> your Roomba.
+>
+> `/pipeline:log` is fine for a quick check. For actually following a long pipeline run,
+> `tail -n 40 -f /tmp/pipeline.log` is free, instant, and does not require Claude to
+> process the meaning of `[13:04:22Z] ▸ [QA] Committing tests to branch...` in order
+> to show it to you. It is just text. A terminal can do this. Terminals are good at text.
+>
+> Use the slash command when you're feeling fancy. Use `tail` when you're feeling economical.
+> The log is identical either way.
+
+---
+
 ### Resume after human approval
 
 After you add the `pipeline:approved` label to an issue:
@@ -405,6 +456,7 @@ your-project/
 │       ├── setup.md           ← one-time project provisioning agent
 │       ├── git-watcher.md     ← entry point, polls for ready issues
 │       ├── intake.md          ← requirements + acceptance criteria
+│       ├── estimator.md       ← business value, customer impact & complexity
 │       ├── eu-compliance.md   ← EU regulatory review + branch creation
 │       ├── architect.md       ← architecture decisions (ADR format)
 │       ├── solution-design.md ← file-by-file implementation plan
