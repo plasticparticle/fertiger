@@ -16,7 +16,7 @@ gh project item-list $GITHUB_PROJECT_NUMBER \
   --owner $GITHUB_PROJECT_OWNER \
   --format json \
   --limit 100 \
-  | jq '[.items[] | select(.content.number != null) | {
+  | jq '[.items[] | select(.content.number) | {
       number: .content.number,
       title: .title,
       status: (.status // "No Status")
