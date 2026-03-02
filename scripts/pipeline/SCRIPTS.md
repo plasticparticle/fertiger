@@ -122,13 +122,20 @@ BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 ---
 
 ### swarm-lock.sh
-**Purpose:** Claim or release file ownership locks to prevent parallel agent conflicts.
+**Purpose:** Coordinate file ownership between parallel dev agents. Uses per-agent
+GitHub Issue comments so agents never write to the same comment — eliminating
+write-write conflicts. Ownership disputes are resolved by timestamp (most recent
+claim wins); `verify` confirms the winner after allowing concurrent claims to land.
 **Usage:**
 ```bash
-scripts/pipeline/swarm-lock.sh claim  AGENT_NAME "file1 file2"
-scripts/pipeline/swarm-lock.sh check  FILE_PATH
-scripts/pipeline/swarm-lock.sh release AGENT_NAME
+scripts/pipeline/swarm-lock.sh claim   AGENT_NAME "file1 file2"   # write claim
+scripts/pipeline/swarm-lock.sh verify  AGENT_NAME "file1 file2"   # confirm ownership (waits 3s)
+scripts/pipeline/swarm-lock.sh check   FILE_PATH                  # who owns this file?
+scripts/pipeline/swarm-lock.sh release AGENT_NAME                 # delete claim after push
+scripts/pipeline/swarm-lock.sh list                               # show all active claims
 ```
+**Env:** `SWARM_VERIFY_WAIT` — seconds verify() waits before re-fetching (default: 3)
+**Protocol:** always call `verify` after `claim` before starting implementation.
 **Used by:** developer
 
 ---

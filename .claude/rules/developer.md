@@ -98,26 +98,34 @@ runner-specific commands.
 
 ## Step 3: Claim Your Files (Swarm Lock)
 
-Before starting work, register your file ownership to prevent conflicts with
-other parallel agents:
+Before starting work, register your file ownership and confirm you won the
+claim. The lock uses per-agent GitHub comments so write conflicts between
+agents are impossible. Ownership disputes (two agents claiming the same file
+at the same time) are resolved by timestamp: the most recent claim wins.
 
 ```bash
 source .claude/config.sh
 # ISSUE_NUMBER is not exported by config.sh — set it explicitly:
 export ISSUE_NUMBER=<your-issue-number>
 
-# Claim your assigned files
+# Step 1 — Write your claim (fast, no conflict possible at API level)
 scripts/pipeline/swarm-lock.sh claim "$AGENT_NAME" "src/models/MyModel.ts src/services/MyService.ts"
 
-# Check if any of your files are already claimed by another agent
-scripts/pipeline/swarm-lock.sh check "src/models/MyModel.ts"
-# Output: CLAIMED by agent-2 | FREE
+# Step 2 — Verify you won the claim race (waits 3s, then re-fetches all claims)
+scripts/pipeline/swarm-lock.sh verify "$AGENT_NAME" "src/models/MyModel.ts src/services/MyService.ts"
+# Output: CONFIRMED: agent-name owns all claimed files
+# OR:     CONTESTED: src/models/MyModel.ts — CLAIMED by agent-B
 ```
 
-If a file is already claimed by another agent:
+If `verify` returns CONTESTED for a file:
 1. Post a blocked comment (see template below)
 2. Implement a stub/interface for the dependency first
-3. Poll with `swarm-lock.sh check` every 60 seconds until the lock is released
+3. Poll with `swarm-lock.sh check` every 60 seconds until released
+
+To see the current state of all claims:
+```bash
+scripts/pipeline/swarm-lock.sh list
+```
 
 ---
 
