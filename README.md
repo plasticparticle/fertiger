@@ -104,6 +104,7 @@ All agent output lives as structured comments on your GitHub Issue, creating a p
 ## Prerequisites
 
 - [Claude Code](https://claude.ai/code) installed and authenticated
+- **Claude model: Sonnet or Opus** — Haiku is not recommended. The agents (particularly EU Compliance, Architect, and the Developer Swarm) require sustained multi-step reasoning across large contexts. Haiku will technically run but will produce shallow output and miss steps. Sonnet 4.5+ is the minimum for reliable results; Opus gives the best quality at higher cost.
 - [GitHub CLI](https://cli.github.com/) (`gh`) installed — see Step 1 below
 - A GitHub repository (the pipeline configures the Project board for you)
 - Node.js + npm project (adapt commands for other runtimes)
