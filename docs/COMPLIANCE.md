@@ -21,3 +21,14 @@ _(None yet — add project-wide compliance requirements here)_
 
 | Issue | Feature | Verdict | DPIA? | AI Act | Key Finding | Date |
 |-------|---------|---------|-------|--------|-------------|------|
+
+## Audit Log
+
+> Updated by the Compliance Audit Agent after each `/agent:compliance-audit` run.
+> The `<!-- last-audit: -->` marker is read by `scripts/pipeline/scan-compliance.sh`
+> to scope the recent-merges check to changes since the previous audit.
+
+<!-- last-audit: (not yet run) -->
+
+| Date | Result | Unregistered PII | Unregistered Processors | Out-of-pipeline Merges | Drift Issue |
+|------|--------|-----------------|------------------------|------------------------|-------------|

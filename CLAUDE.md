@@ -78,6 +78,7 @@ Create these labels in the repo:
 - `pipeline:blocked`    — agent sets when stuck
 - `pipeline:approved`   — human adds to approve development
 - `pipeline:done`       — pipeline complete
+- `compliance:drift`    — created automatically by `/agent:compliance-audit` when drift is found
 
 ## Agent Rules (modular)
 Each agent has its own rules file:
@@ -92,6 +93,7 @@ Each agent has its own rules file:
 - `.claude/rules/code-quality.md`
 - `.claude/rules/security.md`
 - `.claude/rules/git-agent.md`         ← final commit + PR
+- `.claude/rules/compliance-audit.md`  ← periodic drift check, run via `/agent:compliance-audit`
 
 ## Pipeline Script Library
 Reusable scripts live in `scripts/pipeline/`. Full docs: `scripts/pipeline/SCRIPTS.md`.

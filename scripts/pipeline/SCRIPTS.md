@@ -168,6 +168,24 @@ Example output:
 
 ---
 
+## Compliance Audit
+
+### scan-compliance.sh
+**Purpose:** Scan source code for personal data fields, external processors, data stores,
+AI processing patterns, and out-of-pipeline merges. Used by the Compliance Audit Agent
+to detect drift from `$PIPELINE_DOCS_DIR/COMPLIANCE.md`.
+**Usage:** `bash scripts/pipeline/scan-compliance.sh [SOURCE_DIR...]`
+**Arguments:**
+- `SOURCE_DIR` — one or more directories to scan (default: auto-detect `src/`, `lib/`, `app/`, `pkg/`)
+**Output:** Labelled text sections (`=== SECTION_NAME ===`) readable by the agent.
+  Sections: `PERSONAL_DATA_CANDIDATES`, `EXTERNAL_ENDPOINTS`, `THIRD_PARTY_SDKS`,
+  `DATA_STORES`, `AI_PROCESSING`, `RECENT_MERGES`.
+**Env required:** `PIPELINE_DOCS_DIR` (from `.claude/config.sh`) — used to extract the
+  last-audit date from `COMPLIANCE.md` to scope the recent-merges check.
+**Used by:** compliance-audit
+
+---
+
 ## Framework Update
 
 ### `/pipeline:update` (no script — uses git directly)
