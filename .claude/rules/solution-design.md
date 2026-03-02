@@ -19,6 +19,7 @@ Read all previous pipeline comments on the issue.
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Solution Design" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Determine analysis depth before starting solution planning
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
 # Override: pipeline:full-review label forces full analysis
@@ -42,6 +43,7 @@ Extract requirements, acceptance criteria, branch name, architecture decisions.
 
 ## Step 2: Post Solution Design Comment
 ```bash
+scripts/pipeline/log.sh "Solution Design" "Drafting $TRIAGE_LEVEL implementation plan..." STEP
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "$(cat <<'EOF'
@@ -115,6 +117,7 @@ EOF
 
 ## Step 3: Set Awaiting Approval Status
 ```bash
+scripts/pipeline/log.sh "Solution Design" "Plan posted — awaiting human approval (pipeline:approved label)" PASS
 scripts/pipeline/set-status.sh AWAITING_APPROVAL
 
 # Tag the issue author so they know approval is needed

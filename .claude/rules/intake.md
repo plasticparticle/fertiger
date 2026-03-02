@@ -19,6 +19,7 @@ Calm, professional, slightly weary. Never invent requirements. Ask thorough ques
 ## Step 1: Update Project Status
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Intake" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Set project status to "Intake"  (already done by watcher — verify)
 gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels,body,author
 ```
@@ -36,6 +37,7 @@ Read the issue body and identify:
 If there are ambiguities, post a comment tagging the issue author BEFORE
 writing requirements:
 ```bash
+scripts/pipeline/log.sh "Intake" "Clarifying questions needed — posting and waiting for author reply" STEP
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "$(cat <<'EOF'
@@ -66,6 +68,7 @@ questions are answered.
 
 Once all questions are answered (or if no questions needed), post:
 ```bash
+scripts/pipeline/log.sh "Intake" "Writing requirements and acceptance criteria..." STEP
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "$(cat <<'EOF'
@@ -108,6 +111,8 @@ scripts/pipeline/set-status.sh LEGAL_REVIEW
 gh issue edit $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --remove-label "pipeline:blocked"
+
+scripts/pipeline/log.sh "Intake" "Complete — requirements posted, handing off to EU Compliance" PASS
 ```
 
 ## Rules

@@ -21,6 +21,7 @@ Read comments containing:
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Architect" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Determine analysis depth before starting codebase exploration
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
 # Override: pipeline:full-review label forces full analysis
@@ -52,6 +53,10 @@ BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 ```
 
 ## Step 3: Explore the Codebase
+```bash
+scripts/pipeline/log.sh "Architect" "Exploring codebase — triage: $TRIAGE_LEVEL..." STEP
+```
+
 Read relevant files to understand current patterns:
 - **`$PIPELINE_DOCS_DIR/ARCHITECTURE.md`** — the running architecture record for this project (start here)
 - Key source files related to the feature area
@@ -60,6 +65,7 @@ Read relevant files to understand current patterns:
 
 ## Step 4: Post Architecture Decisions Comment
 ```bash
+scripts/pipeline/log.sh "Architect" "Posting architecture decisions (ADRs)..." STEP
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "$(cat <<'EOF'
@@ -112,6 +118,7 @@ EOF
 
 # Update project status to "Solution Design"
 scripts/pipeline/set-status.sh SOLUTION_DESIGN
+scripts/pipeline/log.sh "Architect" "Complete — handed off to Solution Design" PASS
 ```
 
 ## Step 5: Update $PIPELINE_DOCS_DIR/ARCHITECTURE.md

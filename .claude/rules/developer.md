@@ -25,6 +25,7 @@ Before doing anything else, post a comment so the issue shows who picked up whic
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Dev[$AGENT_NAME]" "Starting — Issue #$ISSUE_NUMBER" AGENT
 
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
@@ -228,6 +229,7 @@ Tests: scripts/pipeline/run-tests.sh $FEATURE_SLUG
 Files: [list]"
 
 git push origin $BRANCH_NAME
+scripts/pipeline/log.sh "Dev[$AGENT_NAME]" "Committed and pushed — files implemented" STEP
 ```
 
 ---
@@ -312,6 +314,7 @@ gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
 
 # Set status to QA Review
 scripts/pipeline/set-status.sh QA_REVIEW
+scripts/pipeline/log.sh "Dev Swarm" "All agents complete — handing off to QA Validation" PASS
 
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
   --body "<!-- pipeline-agent:dev-complete -->

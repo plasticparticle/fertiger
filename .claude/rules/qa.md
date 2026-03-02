@@ -42,6 +42,7 @@ Do **not** fetch the entire comment thread. Pull only the two comments that matt
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "QA" "Starting (Mode 1: Test Author) — Issue #$ISSUE_NUMBER, triage: $TRIAGE_LEVEL" AGENT
 
 # Get intake comment (acceptance criteria)
 gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments --json comments \
@@ -99,6 +100,7 @@ Tests **must fail** at this point — no implementation exists yet. That is corr
 ### Step 5: Commit Tests
 
 ```bash
+scripts/pipeline/log.sh "QA" "Committing tests to branch..." STEP
 git add tests/
 git commit -m "test($FEATURE_SLUG): TDD contract for #$ISSUE_NUMBER
 
@@ -129,6 +131,7 @@ $(echo "$TEST_FILES" | sed 's/^/- \`/' | sed 's/$/\`/')
 
 # Set status to In Development so the watcher can trigger the Dev Swarm
 scripts/pipeline/set-status.sh IN_DEVELOPMENT
+scripts/pipeline/log.sh "QA" "Complete — $TEST_COUNT tests written, handed off to Developer Swarm" PASS
 ```
 
 ---
@@ -141,6 +144,7 @@ Issue project status is `QA Review`.
 ### Step 1: Fetch Failure Context (if this is a retry)
 
 ```bash
+scripts/pipeline/log.sh "QA Validation" "Starting (Mode 2: Validator) — Issue #$ISSUE_NUMBER" AGENT
 # Check if this is a retry — read only the last QA validation comment
 LAST_QA=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --comments --json comments \
   | jq '[.comments[] | select(.body | contains("pipeline-agent:qa-validation"))] | last | .body')
@@ -155,7 +159,7 @@ If `RETRY_COUNT > 0`, read the failure details before running tests so you know 
 
 ```bash
 BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
-
+scripts/pipeline/log.sh "QA Validation" "Running test suite for $FEATURE_SLUG..." STEP
 npm run test -- --testPathPattern=$FEATURE_SLUG
 npm run test:coverage -- --testPathPattern=$FEATURE_SLUG
 ```
@@ -181,6 +185,7 @@ $(list each AC with ✅ PASS)")
 Handing off to Code Quality Agent."
 
 scripts/pipeline/set-status.sh CODE_REVIEW
+scripts/pipeline/log.sh "QA Validation" "PASSED — $PASS_COUNT tests, coverage $COVERAGE%" PASS
 ```
 
 ### Step 3b: Tests Fail → Retry or Escalate
@@ -194,6 +199,7 @@ Human intervention required. @{TECH_LEAD} please review.
 
 $(list failed tests and unmet ACs)"
   gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+  scripts/pipeline/log.sh "QA Validation" "ESCALATED — 3 failures, human intervention required" FAIL
 
 else
   gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO --body "<!-- pipeline-agent:qa-validation -->
@@ -214,5 +220,6 @@ $(specific, actionable — reference exact file and function if possible)
 🔄 Returning to Developer Swarm."
 
   scripts/pipeline/set-status.sh IN_DEVELOPMENT
+  scripts/pipeline/log.sh "QA Validation" "FAILED (attempt $((RETRY_COUNT+1))/3) — returning to Developer Swarm" FAIL
 fi
 ```
