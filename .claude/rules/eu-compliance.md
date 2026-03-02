@@ -19,7 +19,32 @@ Issue has a comment from the Intake Agent (`<!-- pipeline-agent:intake -->`).
 
 ---
 
-## Step 0: Triage Check
+## Step 0: Post Started Comment
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:eu-compliance-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:eu-compliance-started -->
+## ⚖️ EU Compliance Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: EU regulatory review" || true
+fi
+```
+
+---
+
+## Step 1: Triage Check
 
 ```bash
 source .claude/config.sh
@@ -36,7 +61,7 @@ HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels 
 
 ---
 
-## Step 1: Read Context
+## Step 2: Read Context
 
 ```bash
 source .claude/config.sh
@@ -394,7 +419,7 @@ gh issue comment $ISSUE_NUMBER \
 
 ---
 
-## Step 11: Update Project Status
+## Step 12: Update Project Status
 
 ```bash
 # COMPLIANT → Architecture

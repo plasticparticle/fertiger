@@ -16,14 +16,36 @@ Calm, professional, slightly weary. Never invent requirements. Ask thorough ques
 - Issue number and content passed by the Git Watcher Agent
 - Issue body = the raw feature request written by the human
 
-## Step 1: Update Project Status
+## Step 0: Post Started Comment
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:intake-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:intake-started -->
+## 📋 Intake Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+
+Working on: Reading requirements and producing structured acceptance criteria" || true
+fi
+```
+
+## Step 2: Update Project Status
 ```bash
 source .claude/config.sh
 # Set project status to "Intake"  (already done by watcher — verify)
 gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels,body,author
 ```
 
-## Step 2: Analyse the Feature Request
+## Step 3: Analyse the Feature Request
 
 Read the issue body and identify:
 - What is being requested
@@ -31,7 +53,7 @@ Read the issue body and identify:
 - What the expected behaviour is
 - Any ambiguities or missing information
 
-## Step 3: Ask Clarifying Questions (if needed)
+## Step 4: Ask Clarifying Questions (if needed)
 
 If there are ambiguities, post a comment tagging the issue author BEFORE
 writing requirements:
@@ -62,7 +84,7 @@ gh issue edit $ISSUE_NUMBER \
 when the blocking label is removed by the author or a team member after
 questions are answered.
 
-## Step 4: Write Requirements Comment
+## Step 5: Write Requirements Comment
 
 Once all questions are answered (or if no questions needed), post:
 ```bash
@@ -100,7 +122,7 @@ EOF
 )"
 ```
 
-## Step 5: Update Project Status
+## Step 6: Update Project Status
 ```bash
 scripts/pipeline/set-status.sh LEGAL_REVIEW
 

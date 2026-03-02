@@ -7,6 +7,29 @@ open a Pull Request, and link everything back to the original issue.
 ## Trigger
 Issue project status is `Ready for Merge`.
 
+## Step 0: Post Started Comment
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:git-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:git-started -->
+## 🚀 Git Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: Final commit and PR creation" || true
+fi
+```
+
 ## Step 1: Verify Pipeline Completeness
 ```bash
 source .claude/config.sh
@@ -57,7 +80,7 @@ git log main..HEAD --oneline
 # git rebase -i main  ← only if explicitly needed
 ```
 
-## Step 4: Create the Pull Request
+## Step 5: Create the Pull Request
 ```bash
 # Build the PR body from issue comments
 PR_BODY=$(cat <<EOF
@@ -104,7 +127,7 @@ gh pr create \
   --label "ready-for-review"
 ```
 
-## Step 5: Link PR to Issue and Project
+## Step 6: Link PR to Issue and Project
 ```bash
 # Get the PR number just created
 PR_NUMBER=$(gh pr list --repo $GITHUB_REPO --head $BRANCH_NAME --json number --jq '.[0].number')
@@ -127,7 +150,7 @@ gh issue edit $ISSUE_NUMBER \
   --add-label "pipeline:done"
 ```
 
-## Step 6: Post Completion Comment on the Issue
+## Step 7: Post Completion Comment on the Issue
 ```bash
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
