@@ -39,6 +39,7 @@ to post never aborts the agent's primary work. A duplicate guard prevents re-pos
 |-----------|------|----------------|-----------|
 | Git Watcher | Agent (rules) | Polls GitHub Project; claims ready issues; hands off to Intake | `.claude/rules/git-watcher.md` |
 | Intake Agent | Agent (rules) | Analyzes issue body; writes structured requirements + ACs | `.claude/rules/intake.md` |
+| Estimator Agent | Agent (rules) | Produces business value scores, customer impact profile, complexity estimate, and enterprise comparison block | `.claude/rules/estimator.md` |
 | EU Compliance Agent | Agent (rules) | Deep EU regulatory review (GDPR, AI Act, NIS2, DSA, etc.); creates feature branch | `.claude/rules/eu-compliance.md` |
 | Architect Agent | Agent (rules) | Explores codebase; produces ADRs and component decisions | `.claude/rules/architect.md` |
 | Solution Design Agent | Agent (rules) | Produces file-by-file implementation plan; triggers human approval | `.claude/rules/solution-design.md` |
