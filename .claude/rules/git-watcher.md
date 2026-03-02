@@ -134,8 +134,35 @@ after 8 hours of inactivity:
 bash .claude/scripts/watch.sh
 ```
 
-The script streams `[watcher] ACTION: ...` lines when issues are ready or
-approved. React to those lines — do not reconstruct the polling logic inline.
+The script emits `[watcher] ACTION: ...` lines when issues are found.
+Handle each case as follows:
+
+**`[watcher] ACTION: N ready issue(s) — hand off to intake pipeline`**
+For each issue in `.ready[]`, follow Steps 3–5 above (de-dupe check, claim,
+hand off to Intake Agent).
+
+**`[watcher] ACTION: N approved issue(s) — resume pipeline from QA`**
+For each issue in `.approved[]`:
+```bash
+ISSUE_NUMBER=<number from .approved[].number>
+export ISSUE_NUMBER
+
+# Remove the approved label so this issue isn't picked up again next poll
+gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --remove-label "pipeline:approved"
+
+# Post a resumption comment
+gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
+  --body "<!-- pipeline-agent:watcher-resume -->
+## ▶️ Pipeline Resuming
+
+Human approval received. Resuming from QA Test Writing.
+
+Agents: 🧪 QA → 💻 Dev Swarm → ✅ QA Validation → 🔬 Code Quality → 🔒 Security → 🚀 PR"
+```
+Then read `.claude/rules/qa.md`, `.claude/rules/developer.md`,
+`.claude/rules/code-quality.md`, `.claude/rules/security.md`, and
+`.claude/rules/git-agent.md` in order, and execute the post-approval
+pipeline for that issue starting from QA Test Writing.
 
 To override timing for testing:
 ```bash
