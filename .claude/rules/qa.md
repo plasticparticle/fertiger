@@ -126,6 +126,9 @@ gh issue comment $ISSUE_NUMBER \
 $(echo "$TEST_FILES" | sed 's/^/- \`/' | sed 's/$/\`/')
 
 ✅ Developer Swarm can now start."
+
+# Set status to In Development so the watcher can trigger the Dev Swarm
+scripts/pipeline/set-status.sh IN_DEVELOPMENT
 ```
 
 ---

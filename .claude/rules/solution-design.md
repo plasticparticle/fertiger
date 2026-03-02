@@ -123,6 +123,9 @@ gh issue comment $ISSUE_NUMBER \
   --body "@{ISSUE_AUTHOR} @{TECH_LEAD} — The development plan above is ready for your review. Add the label **\`pipeline:approved\`** to this issue to start development, or leave feedback as a comment."
 ```
 
+The pipeline is now paused. When `pipeline:approved` is added, the watcher detects it
+and resumes from QA Test Writing — no manual agent invocation needed.
+
 ## Rules
 - Every file in the file list must map to at least one requirement
 - Every acceptance criterion must have at least one file/phase covering it

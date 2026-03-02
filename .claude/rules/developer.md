@@ -262,6 +262,10 @@ $TEST_OUTPUT
 
 ## On QA Retry (status returned to `In Development`)
 
+**Trigger:** The watcher detects that project status has been set back to `In Development`
+by the QA Validation agent and re-invokes the developer agent. Read the QA validation
+failure comment to understand what failed before touching any code.
+
 Read the QA validation failure comment carefully:
 
 ```bash

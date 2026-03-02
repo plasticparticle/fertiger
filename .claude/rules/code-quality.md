@@ -91,8 +91,10 @@ EOF
 # PASS → Security Review
 scripts/pipeline/set-status.sh SECURITY_REVIEW
 
-# FAIL → set pipeline:blocked
+# FAIL → set pipeline:blocked (developer must fix before pipeline continues)
 gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
+  --body "@{TECH_LEAD} Code quality issues must be resolved before this can proceed to Security Review. See violations listed above."
 ```
 
 ## Auto-fix Allowed
@@ -227,6 +229,10 @@ git push origin $BRANCH_NAME
 ## Step 5: Update Status
 ```bash
 # PASS → Ready for Merge
+scripts/pipeline/set-status.sh READY_FOR_MERGE
+
+# CONDITIONAL → note medium/low issues, proceed to Ready for Merge
+# (CONDITIONAL does not block — Git Agent will include the notes in the PR)
 scripts/pipeline/set-status.sh READY_FOR_MERGE
 
 # BLOCKED → set pipeline:blocked and tag author

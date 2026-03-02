@@ -400,8 +400,15 @@ gh issue comment $ISSUE_NUMBER \
 # COMPLIANT → Architecture
 scripts/pipeline/set-status.sh ARCHITECTURE
 
-# CONDITIONAL → set pipeline:blocked (status stays at Legal Review until human clears)
-# BLOCKED → set pipeline:blocked
+# CONDITIONAL → lock status at Legal Review and set pipeline:blocked
+# Pipeline resumes when @TECH_LEAD removes pipeline:blocked after accepting mitigations,
+# at which point manually call: scripts/pipeline/set-status.sh ARCHITECTURE
+scripts/pipeline/set-status.sh LEGAL_REVIEW
+gh issue edit $ISSUE_NUMBER \
+  --repo $GITHUB_REPO \
+  --add-label "pipeline:blocked"
+
+# BLOCKED → set pipeline:blocked (no branch created, no status advance)
 gh issue edit $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --add-label "pipeline:blocked"
