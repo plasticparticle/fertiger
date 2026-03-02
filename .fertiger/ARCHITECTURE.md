@@ -33,6 +33,7 @@ and dependency checking.
 |-----------|------|----------------|-----------|
 | Git Watcher | Agent (rules) | Polls GitHub Project; claims ready issues; hands off to Intake | `.claude/rules/git-watcher.md` |
 | Intake Agent | Agent (rules) | Analyzes issue body; writes structured requirements + ACs | `.claude/rules/intake.md` |
+| Estimator Agent | Agent (rules) | Produces business value scores, customer impact profile, complexity estimate, and enterprise comparison block | `.claude/rules/estimator.md` |
 | EU Compliance Agent | Agent (rules) | Deep EU regulatory review (GDPR, AI Act, NIS2, DSA, etc.); creates feature branch | `.claude/rules/eu-compliance.md` |
 | Architect Agent | Agent (rules) | Explores codebase; produces ADRs and component decisions | `.claude/rules/architect.md` |
 | Solution Design Agent | Agent (rules) | Produces file-by-file implementation plan; triggers human approval | `.claude/rules/solution-design.md` |
@@ -56,6 +57,24 @@ and dependency checking.
 ## Architecture Decision Records
 
 _ADRs are appended here by the Architect Agent on each feature. Most recent first._
+
+### ADR-011: Enterprise comparison timeline scales with T-shirt size — Issue #5 (2026-03-02)
+- **Context:** AC-006 requires enterprise timelines to scale with feature complexity; without anchors agents produce flat outputs.
+- **Decision:** Reference brackets: XS ≤ 4 weeks, S ≤ 8 weeks, M ≤ 16 weeks, L ≤ 24 weeks, XL > 24 weeks. T-shirt size is evaluated first; enterprise block is generated after.
+- **Rationale:** Illustrative anchors prevent degenerate outputs. Outputs are advisory, not binding.
+- **Consequences:** Estimator rules must evaluate size before generating the enterprise comparison.
+
+### ADR-010: Estimator Agent position — after Intake, before EU Compliance — Issue #5 (2026-03-02)
+- **Context:** Estimator reads intake requirements and enriches the issue thread before downstream agents run.
+- **Decision:** Estimator runs immediately after Intake posts `<!-- pipeline-agent:intake -->`, before EU Compliance.
+- **Rationale:** All downstream agents and the human approval checkpoint benefit from the business context being present early in the thread.
+- **Consequences:** CLAUDE.md pipeline diagram updated. EU Compliance trigger condition unchanged.
+
+### ADR-009: Estimator Agent as a rules-file agent — Issue #5 (2026-03-02)
+- **Context:** Estimation requires LLM judgment (T-shirt sizing, enterprise overhead, value scoring), not imperative computation.
+- **Decision:** Implement as `.claude/rules/estimator.md` following the standard rules-file pattern.
+- **Rationale:** Consistent with all agents; no deployment changes; outputs are advisory for human reviewers, not automated decisions.
+- **Consequences:** Estimation quality is bounded by Claude's judgment; human review at the approval checkpoint is the quality gate.
 
 ### ADR-008: POSIX sh compatibility as the primary portability constraint — Issue #3 (2026-02-26)
 - **Context:** Issue #3 requires Linux and macOS compatibility for pipeline scripts. macOS ships bash 3.x (pre-associative arrays) and the default shell is zsh.
