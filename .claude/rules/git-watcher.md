@@ -127,7 +127,7 @@ The Intake Agent takes over from here.
 ## Step 6: Watch for Approval (Polling Mode)
 
 If running in watch mode (`/pipeline:watch`), run the pre-built watch loop.
-It polls every 5 minutes, resets idle timer when work is found, and stops
+It polls every minute, resets idle timer when work is found, and stops
 after 8 hours of inactivity:
 
 ```bash
@@ -143,7 +143,7 @@ POLL_INTERVAL=60 MAX_IDLE_SECONDS=600 bash .claude/scripts/watch.sh
 ```
 
 ## Polling Interval
-Defined in `.claude/scripts/watch.sh` — default 300s poll, 28800s (8h) idle timeout.
+Defined in `.claude/scripts/watch.sh` — default 60s poll, 28800s (8h) idle timeout.
 
 ## Error Handling
 If any agent in the pipeline sets `pipeline:blocked` label:

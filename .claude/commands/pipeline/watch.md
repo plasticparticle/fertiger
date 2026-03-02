@@ -1,4 +1,4 @@
-Start the Git Watcher Agent. Polls the GitHub Project every 5 minutes for
+Start the Git Watcher Agent. Polls the GitHub Project every minute for
 issues with status "Ready" or label "pipeline:ready". Processes each one
 found through the full pipeline.
 Stops after 8 hours of no new issues.

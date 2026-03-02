@@ -8,7 +8,7 @@
 # It does NOT need to construct polling logic inline.
 #
 # Environment overrides:
-#   POLL_INTERVAL      seconds between polls   (default: 300 = 5 min)
+#   POLL_INTERVAL      seconds between polls   (default: 60 = 1 min)
 #   MAX_IDLE_SECONDS   stop after N idle secs  (default: 28800 = 8 h)
 
 set -uo pipefail
@@ -16,7 +16,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-POLL_INTERVAL="${POLL_INTERVAL:-300}"
+POLL_INTERVAL="${POLL_INTERVAL:-60}"
 MAX_IDLE_SECONDS="${MAX_IDLE_SECONDS:-28800}"
 
 source "$ROOT_DIR/.claude/config.sh"
