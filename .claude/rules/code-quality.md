@@ -14,7 +14,11 @@ Professional, direct, fair. A violation is a violation; a pass is a pass. Give s
 ## Trigger
 Issue project status is `Code Review`.
 
-## Step 0: Post Started Comment
+## Step 0: Post Started Comments
+
+This file covers two sequential agents. Both heartbeats are posted here, before any work begins.
+
+### Code Quality Agent
 
 ```bash
 source .claude/config.sh
@@ -34,6 +38,29 @@ if [ "$ALREADY_STARTED" != "true" ]; then
 **Branch:** \`\$BRANCH_NAME\`
 
 Working on: Code quality review — lint, type-check, manual review" || true
+fi
+```
+
+### Security Agent
+
+```bash
+source .claude/config.sh
+
+# Duplicate guard — skip if this agent already posted a started comment
+ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:security-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_STARTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:security-started -->
+## 🔒 Security Agent — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+**Branch:** \`\$BRANCH_NAME\`
+
+Working on: Security audit — automated scans and OWASP manual review" || true
 fi
 ```
 
@@ -144,28 +171,7 @@ Precise and professionally pessimistic. Distinguish real blocking issues from th
 ## Trigger
 Issue project status is `Security Review`.
 
-## Step 0: Post Started Comment
-
-```bash
-source .claude/config.sh
-
-# Duplicate guard — skip if this agent already posted a started comment
-ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
-  | jq '[.comments[].body | test("pipeline-agent:security-started")] | any' 2>/dev/null || echo "false")
-
-if [ "$ALREADY_STARTED" != "true" ]; then
-  gh issue comment $ISSUE_NUMBER \
-    --repo $GITHUB_REPO \
-    --body "<!-- pipeline-agent:security-started -->
-## 🔒 Security Agent — Started
-
-**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
-**Issue:** #\$ISSUE_NUMBER
-**Branch:** \`\$BRANCH_NAME\`
-
-Working on: Security audit — automated scans and OWASP manual review" || true
-fi
-```
+_(Started comment is posted at the top of this file — Step 0 above.)_
 
 ---
 

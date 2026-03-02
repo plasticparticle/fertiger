@@ -10,6 +10,30 @@ Invoked manually via `/pipeline:watch` or on a schedule.
 
 ---
 
+## Step 0: Post Started Comment (per-issue)
+
+When a ready issue is found and `ISSUE_NUMBER` is set, post a heartbeat before claiming it:
+
+```bash
+# Duplicate guard — skip if this agent already posted a started comment for this issue
+ALREADY_POSTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq '[.comments[].body | test("pipeline-agent:watcher-started")] | any' 2>/dev/null || echo "false")
+
+if [ "$ALREADY_POSTED" != "true" ]; then
+  gh issue comment $ISSUE_NUMBER \
+    --repo $GITHUB_REPO \
+    --body "<!-- pipeline-agent:watcher-started -->
+## 🤖 Git Watcher — Started
+
+**Started at:** $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")
+**Issue:** #\$ISSUE_NUMBER
+
+Picking up issue — claiming and handing off to Intake Agent." || true
+fi
+```
+
+---
+
 ## Step 1: Load Config
 ```bash
 source .claude/config.sh

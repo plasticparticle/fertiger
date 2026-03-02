@@ -28,7 +28,7 @@ source .claude/config.sh
 
 # Duplicate guard — skip if this agent already posted a started comment
 ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
-  | jq "[.comments[].body | test(\"pipeline-agent:dev-${AGENT_NAME}-started\")] | any" 2>/dev/null || echo "false")
+  | jq --arg name "$AGENT_NAME" '[.comments[].body | test("pipeline-agent:dev-" + $name + "-started")] | any' 2>/dev/null || echo "false")
 
 if [ "$ALREADY_STARTED" != "true" ]; then
   gh issue comment $ISSUE_NUMBER \

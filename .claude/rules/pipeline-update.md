@@ -10,6 +10,16 @@ Invoked via `/pipeline:update`.
 
 ---
 
+## Step 0: Print Started Message
+
+No issue number context — stdout only:
+
+```bash
+echo "⚙️  Pipeline Update Agent — Starting at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+```
+
+---
+
 ## Step 1: Check for Uncommitted Changes
 
 ```bash
