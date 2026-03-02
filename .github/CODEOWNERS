@@ -14,10 +14,11 @@ CLAUDE.md @plasticparticle
 # Pipeline scripts
 scripts/pipeline/ @plasticparticle
 
-# Legal & compliance docs — must be reviewed by the tech lead
-docs/COMPLIANCE.md @plasticparticle
-docs/SECURITY.md @plasticparticle
-docs/ARCHITECTURE.md @plasticparticle
+# Compliance & security docs (fertiger's own history) — must be reviewed by the tech lead
+.fertiger/ @plasticparticle
+
+# Consumer-facing doc templates
+docs/ @plasticparticle
 
 # Tests
 tests/ @plasticparticle

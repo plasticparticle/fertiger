@@ -2,6 +2,9 @@
 # Contains project-specific GitHub IDs and handles — never commit this
 .claude/config.sh
 
+# Local Claude Code session overrides — machine-specific, never commit
+.claude/settings.local.json
+
 # ─── Node.js / TypeScript ─────────────────────────────────────────────────────
 node_modules/
 dist/

@@ -259,7 +259,7 @@ Useful for spot-checks or debugging a specific stage:
 
 ```bash
 claude "/agent:intake 42"
-claude "/agent:legal 42"
+claude "/agent:eu-compliance 42"
 claude "/agent:security 42"
 claude "/agent:qa-validate 42"
 ```
