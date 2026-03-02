@@ -175,7 +175,6 @@ cp -r fertiger/.claude your-project/.claude
 cp -r fertiger/scripts your-project/scripts
 cp -r fertiger/docs your-project/docs
 cp fertiger/settings.json your-project/settings.json
-cp fertiger/FEATURE-REQUEST.md your-project/FEATURE-REQUEST.md
 ```
 
 Or use fertiger as a GitHub template repository.
@@ -428,7 +427,6 @@ your-project/
 │   ├── ARCHITECTURE.md        ← blank template (populated by Architect Agent per feature)
 │   ├── COMPLIANCE.md          ← blank template (populated by EU Compliance Agent per feature)
 │   └── SECURITY.md            ← blank template (populated by Security Agent per feature)
-├── FEATURE-REQUEST.md         ← GitHub Issue template
 ├── CLAUDE.md                  ← pipeline configuration (checked in)
 └── settings.json              ← enables parallel agent teams
 ```

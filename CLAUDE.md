@@ -90,11 +90,19 @@ Each agent has its own rules file:
 - `.claude/rules/security.md`
 - `.claude/rules/git-agent.md`         ← final commit + PR
 
+## Pipeline Script Library
+Reusable scripts live in `scripts/pipeline/`. Full docs: `scripts/pipeline/SCRIPTS.md`.
+- **Before writing a bash block**, check the registry — the script may already exist
+- **After writing a reusable script**, add it to `scripts/pipeline/SCRIPTS.md` and commit both together
+- Key scripts: `set-status.sh STATUS_NAME` · `get-agent-comment.sh AGENT` · `checkout-branch.sh`
+- Agents may create new scripts in `scripts/pipeline/` and register them at runtime
+
 ## Universal Rules (all agents)
 - Source config: `source .claude/config.sh` before any `gh` command
+- `ISSUE_NUMBER` is NOT in config.sh — always set it manually: `export ISSUE_NUMBER=N`
 - Read ALL existing issue comments before posting yours
 - Post output as a structured comment (see each agent's template)
-- Update the issue's Project status field after posting
+- Update the issue's Project status field after posting — use `scripts/pipeline/set-status.sh`
 - Never post duplicate comments — check if your section already exists
 - If blocked: add label `pipeline:blocked`, post a BLOCKED comment explaining why
 - Use `gh issue comment $ISSUE_NUMBER --body "..."` for all communication
