@@ -43,6 +43,8 @@ through GitHub Issue comments and labels — no local state files.
       ↓
 [INTAKE AGENT]       → posts comment, sets status: Intake
       ↓
+[ESTIMATOR AGENT]    → posts business value + complexity assessment, sets status: Legal Review
+      ↓
 [EU COMPLIANCE AGENT] → posts legal memo, creates branch, sets status: Architecture
       ↓
 [ARCHITECT]     → posts comment, sets status: Solution Design
@@ -81,6 +83,7 @@ Create these labels in the repo:
 Each agent has its own rules file:
 - `.claude/rules/git-watcher.md`       ← entry point, polls GitHub Project
 - `.claude/rules/intake.md`
+- `.claude/rules/estimator.md`        ← business value, customer impact & complexity
 - `.claude/rules/eu-compliance.md`    ← EU regulatory review (replaces legal.md)
 - `.claude/rules/architect.md`
 - `.claude/rules/solution-design.md`
