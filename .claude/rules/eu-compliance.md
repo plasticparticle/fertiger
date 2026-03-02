@@ -48,11 +48,13 @@ fi
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "EU Compliance" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Determine analysis depth before starting expensive regulatory review
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
 # Override: pipeline:full-review label forces full analysis
 HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
 [ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+scripts/pipeline/log.sh "EU Compliance" "Triage: $TRIAGE_LEVEL" STEP
 ```
 
 **Fast path (TRIVIAL):** Skip deep regulatory triage — post a brief note that no regulated-data concerns were detected and proceed to Architecture without full 16-regulation assessment.
@@ -65,7 +67,7 @@ HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels 
 
 ```bash
 source .claude/config.sh
-
+scripts/pipeline/log.sh "EU Compliance" "Reading requirements and compliance register..." STEP
 # Read intake requirements and existing compliance register
 gh issue view $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
@@ -85,6 +87,10 @@ Extract from the intake comment:
 ---
 
 ## Step 2: Regulatory Triage
+
+```bash
+scripts/pipeline/log.sh "EU Compliance" "Running $TRIAGE_LEVEL regulatory triage across 16 regulations..." STEP
+```
 
 For each regulation below, determine if it is **triggered** by this feature.
 A regulation is triggered if the feature involves the relevant domain.
@@ -245,6 +251,7 @@ For every 🔴 BLOCKING or 🟡 CONDITIONAL finding, produce a concrete mitigati
 ## Step 7: Post Legal Memo Comment
 
 ```bash
+scripts/pipeline/log.sh "EU Compliance" "Posting legal memo comment..." STEP
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "$(cat <<'EOF'
@@ -382,6 +389,7 @@ gh issue edit $ISSUE_NUMBER \
 
 Generate branch name from issue title:
 ```bash
+scripts/pipeline/log.sh "EU Compliance" "Creating feature branch..." STEP
 ISSUE_TITLE=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json title --jq '.title')
 BRANCH_NAME="feature/$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-50)-issue-$ISSUE_NUMBER"
 
@@ -424,9 +432,18 @@ gh issue comment $ISSUE_NUMBER \
 ```bash
 # COMPLIANT → Architecture
 scripts/pipeline/set-status.sh ARCHITECTURE
+scripts/pipeline/log.sh "EU Compliance" "COMPLIANT — proceeding to Architecture" PASS
 
-# CONDITIONAL → set pipeline:blocked (status stays at Legal Review until human clears)
-# BLOCKED → set pipeline:blocked
+# CONDITIONAL → lock status at Legal Review and set pipeline:blocked
+# Pipeline resumes when @TECH_LEAD removes pipeline:blocked after accepting mitigations,
+# at which point manually call: scripts/pipeline/set-status.sh ARCHITECTURE
+scripts/pipeline/set-status.sh LEGAL_REVIEW
+gh issue edit $ISSUE_NUMBER \
+  --repo $GITHUB_REPO \
+  --add-label "pipeline:blocked"
+scripts/pipeline/log.sh "EU Compliance" "CONDITIONAL — mitigations required, pipeline blocked pending review" BLOCK
+
+# BLOCKED → set pipeline:blocked (no branch created, no status advance)
 gh issue edit $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --add-label "pipeline:blocked"

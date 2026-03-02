@@ -133,6 +133,34 @@ scripts/pipeline/swarm-lock.sh release AGENT_NAME
 
 ---
 
+## Terminal Progress Logging
+
+### log.sh
+**Purpose:** Print a timestamped progress line to stdout (visible in the watch terminal)
+and append it to the pipeline log file for tailing in a second terminal.
+**Usage:** `scripts/pipeline/log.sh AGENT_NAME MESSAGE [LEVEL]`
+**Arguments:**
+- `AGENT_NAME` — free-text label, e.g. `"EU Compliance"`, `"Dev[alpha]"`
+- `MESSAGE` — what is happening right now
+- `LEVEL` — one of: `AGENT` (🤖 new agent starting), `STEP` (▸ sub-step),
+  `PASS` (✅ success), `FAIL` (❌ failure), `BLOCK` (🚫 blocked), `INFO` (default)
+**Env vars:**
+- `PIPELINE_LOG_FILE` — log file path (default: `/tmp/pipeline.log`)
+**Used by:** All pipeline agents — called at agent start, key milestones, and completion
+**Companion skill:** `/pipeline:log` — tails the log file in a second terminal
+
+Example output:
+```
+[10:42:15] 🤖 [Intake] Starting — Issue #7
+[10:42:20]  ▸  [Intake] Writing requirements and acceptance criteria...
+[10:43:01]  ✅ [Intake] Complete — requirements posted, handing off to EU Compliance
+[10:43:03] 🤖 [EU Compliance] Starting — Issue #7
+[10:43:05]  ▸  [EU Compliance] Triage: STANDARD
+[10:43:06]  ▸  [EU Compliance] Running STANDARD regulatory triage across 16 regulations...
+```
+
+---
+
 ## Framework Update
 
 ### `/pipeline:update` (no script — uses git directly)

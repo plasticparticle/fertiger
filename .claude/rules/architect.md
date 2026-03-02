@@ -46,6 +46,7 @@ fi
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Architect" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Determine analysis depth before starting codebase exploration
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
 # Override: pipeline:full-review label forces full analysis
@@ -85,6 +86,7 @@ Read relevant files to understand current patterns:
 
 ## Step 5: Post Architecture Decisions Comment
 ```bash
+scripts/pipeline/log.sh "Architect" "Posting architecture decisions (ADRs)..." STEP
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "$(cat <<'EOF'
@@ -137,6 +139,7 @@ EOF
 
 # Update project status to "Solution Design"
 scripts/pipeline/set-status.sh SOLUTION_DESIGN
+scripts/pipeline/log.sh "Architect" "Complete — handed off to Solution Design" PASS
 ```
 
 ## Step 6: Update $PIPELINE_DOCS_DIR/ARCHITECTURE.md

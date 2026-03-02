@@ -44,6 +44,7 @@ fi
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Solution Design" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Determine analysis depth before starting solution planning
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
 # Override: pipeline:full-review label forces full analysis
@@ -67,6 +68,7 @@ Extract requirements, acceptance criteria, branch name, architecture decisions.
 
 ## Step 3: Post Solution Design Comment
 ```bash
+scripts/pipeline/log.sh "Solution Design" "Drafting $TRIAGE_LEVEL implementation plan..." STEP
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "$(cat <<'EOF'
@@ -140,6 +142,7 @@ EOF
 
 ## Step 4: Set Awaiting Approval Status
 ```bash
+scripts/pipeline/log.sh "Solution Design" "Plan posted — awaiting human approval (pipeline:approved label)" PASS
 scripts/pipeline/set-status.sh AWAITING_APPROVAL
 
 # Tag the issue author so they know approval is needed
@@ -147,6 +150,9 @@ gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --body "@{ISSUE_AUTHOR} @{TECH_LEAD} — The development plan above is ready for your review. Add the label **\`pipeline:approved\`** to this issue to start development, or leave feedback as a comment."
 ```
+
+The pipeline is now paused. When `pipeline:approved` is added, the watcher detects it
+and resumes from QA Test Writing — no manual agent invocation needed.
 
 ## Rules
 - Every file in the file list must map to at least one requirement

@@ -68,11 +68,13 @@ fi
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Code Quality" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Determine analysis depth before starting quality review
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
 # Override: pipeline:full-review label forces full analysis
 HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
 [ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+scripts/pipeline/log.sh "Code Quality" "Triage: $TRIAGE_LEVEL" STEP
 ```
 
 **Fast path (TRIVIAL):** Skip automated lint/type-check — review changed files only for obvious violations. Post abbreviated quality comment.
@@ -140,9 +142,13 @@ EOF
 ```bash
 # PASS → Security Review
 scripts/pipeline/set-status.sh SECURITY_REVIEW
+scripts/pipeline/log.sh "Code Quality" "PASS — handing off to Security Agent" PASS
 
-# FAIL → set pipeline:blocked
+# FAIL → set pipeline:blocked (developer must fix before pipeline continues)
 gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
+  --body "@{TECH_LEAD} Code quality issues must be resolved before this can proceed to Security Review. See violations listed above."
+scripts/pipeline/log.sh "Code Quality" "FAIL — pipeline blocked, violations listed on issue" FAIL
 ```
 
 ## Auto-fix Allowed
@@ -179,11 +185,13 @@ _(Started comment is posted at the top of this file — Step 0 above.)_
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Security" "Starting — Issue #$ISSUE_NUMBER" AGENT
 # Determine analysis depth before starting security review
 TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
 # Override: pipeline:full-review label forces full analysis
 HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
 [ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+scripts/pipeline/log.sh "Security" "Triage: $TRIAGE_LEVEL" STEP
 ```
 
 **Fast path (TRIVIAL):** Run automated scans only — skip manual OWASP checklist review if no high-risk areas touched.
@@ -202,6 +210,7 @@ known risk areas, and past findings — use it to calibrate your review and spot
 
 ## Step 3: Run Automated Scans
 ```bash
+scripts/pipeline/log.sh "Security" "Running automated scans (npm audit, semgrep)..." STEP
 npm audit --audit-level=moderate
 npx semgrep --config auto src/   # if available
 ```
@@ -282,9 +291,16 @@ git push origin $BRANCH_NAME
 ```bash
 # PASS → Ready for Merge
 scripts/pipeline/set-status.sh READY_FOR_MERGE
+scripts/pipeline/log.sh "Security" "PASS — handing off to Git Agent" PASS
+
+# CONDITIONAL → note medium/low issues, proceed to Ready for Merge
+# (CONDITIONAL does not block — Git Agent will include the notes in the PR)
+scripts/pipeline/set-status.sh READY_FOR_MERGE
+scripts/pipeline/log.sh "Security" "CONDITIONAL — low/medium findings noted in PR, proceeding" PASS
 
 # BLOCKED → set pipeline:blocked and tag author
 gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
   --body "@{TECH_LEAD} Security issues require manual review before this can proceed."
+scripts/pipeline/log.sh "Security" "BLOCKED — critical/high vulnerabilities found, pipeline stopped" FAIL
 ```

@@ -25,6 +25,7 @@ Before doing anything else, post a heartbeat so the issue shows this agent is ac
 
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Dev[$AGENT_NAME]" "Starting — Issue #$ISSUE_NUMBER" AGENT
 
 # Duplicate guard — skip if this agent already posted a started comment
 ALREADY_STARTED=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
@@ -238,6 +239,7 @@ Tests: scripts/pipeline/run-tests.sh $FEATURE_SLUG
 Files: [list]"
 
 git push origin $BRANCH_NAME
+scripts/pipeline/log.sh "Dev[$AGENT_NAME]" "Committed and pushed — files implemented" STEP
 ```
 
 ---
@@ -271,6 +273,10 @@ $TEST_OUTPUT
 ---
 
 ## On QA Retry (status returned to `In Development`)
+
+**Trigger:** The watcher detects that project status has been set back to `In Development`
+by the QA Validation agent and re-invokes the developer agent. Read the QA validation
+failure comment to understand what failed before touching any code.
 
 Read the QA validation failure comment carefully:
 
@@ -318,6 +324,7 @@ gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
 
 # Set status to QA Review
 scripts/pipeline/set-status.sh QA_REVIEW
+scripts/pipeline/log.sh "Dev Swarm" "All agents complete — handing off to QA Validation" PASS
 
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
   --body "<!-- pipeline-agent:dev-complete -->

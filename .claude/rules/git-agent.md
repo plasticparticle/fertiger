@@ -33,6 +33,8 @@ fi
 ## Step 1: Verify Pipeline Completeness
 ```bash
 source .claude/config.sh
+scripts/pipeline/log.sh "Git Agent" "Starting — Issue #$ISSUE_NUMBER" AGENT
+scripts/pipeline/log.sh "Git Agent" "Verifying all pipeline stages are complete..." STEP
 gh issue view $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --comments \
@@ -117,6 +119,7 @@ See EU Compliance Agent comment on #$ISSUE_NUMBER for full regulatory assessment
 EOF
 )
 
+scripts/pipeline/log.sh "Git Agent" "Creating pull request..." STEP
 gh pr create \
   --repo $GITHUB_REPO \
   --title "feat: $(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json title --jq '.title')" \
@@ -148,6 +151,7 @@ gh project item-edit \
 gh issue edit $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
   --add-label "pipeline:done"
+scripts/pipeline/log.sh "Git Agent" "Pipeline complete — PR created, issue closed" PASS
 ```
 
 ## Step 7: Post Completion Comment on the Issue
