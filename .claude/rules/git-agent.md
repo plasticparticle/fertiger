@@ -172,6 +172,111 @@ The full development pipeline has completed successfully. The PR is ready for hu
 @{TECH_LEAD} This PR is ready for your review."
 ```
 
+## Step 8: Post Cost Summary
+
+Post a structured token-cost comment so every feature's pipeline cost is recorded
+and queryable. This comment is the source of truth for the `/pipeline:cost-report` command.
+
+Determine:
+- **Pipeline start time** — from the `<!-- pipeline-agent:watcher-started -->` comment's `createdAt`
+- **Pipeline end time** — `$(date -u +"%Y-%m-%dT%H:%M:%SZ")`
+- **Duration** — difference between the two timestamps in seconds
+- **Session tokens** — your total input and output tokens for this Claude Code session.
+  You have access to your own token usage. Report the actual values from your session context.
+- **Model** — the model you are running on (e.g. `claude-sonnet-4-6`)
+- **Cost (USD)** — calculate from token counts using the model's current pricing:
+  - claude-sonnet-4-6: input $3.00/M tokens, output $15.00/M tokens, cache read $0.30/M tokens
+
+```bash
+source .claude/config.sh
+scripts/pipeline/log.sh "Git Agent" "Posting cost summary..." STEP
+
+# Get pipeline start time from the watcher-started comment
+PIPELINE_START=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json comments \
+  | jq -r '[.comments[] | select(.body | test("pipeline-agent:watcher-started"))] | first | .createdAt // empty')
+
+PIPELINE_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Get run_id from the structured log sentinel (if issue #15 observability is implemented)
+# Fall back to constructing from watcher timestamp
+RUN_ID=$(cat ".pipeline-logs/issue-${ISSUE_NUMBER}/.current-run-id" 2>/dev/null \
+  || echo "issue-${ISSUE_NUMBER}-$(date -u +%Y%m%d-%H%M%S)")
+```
+
+Then post the comment. Fill in the token values from your actual session usage.
+The JSON block inside the comment is the machine-readable record — keep it valid JSON.
+
+```bash
+BODY_FILE=$(mktemp)
+cat > "$BODY_FILE" << COSTEOF
+<!-- pipeline-agent:cost-summary -->
+## 💰 Pipeline Cost Summary — Issue #$ISSUE_NUMBER
+
+| Field | Value |
+|-------|-------|
+| Issue | #$ISSUE_NUMBER |
+| Run ID | $RUN_ID |
+| Model | [MODEL_NAME] |
+| Pipeline started | $PIPELINE_START |
+| Pipeline completed | $PIPELINE_END |
+| Total input tokens | [INPUT_TOKENS] |
+| Total output tokens | [OUTPUT_TOKENS] |
+| Total tokens | [TOTAL_TOKENS] |
+| Estimated cost (USD) | $[COST_USD] |
+
+### Per-Agent Breakdown
+_Approximate distribution across pipeline stages_
+
+| Agent | Est. Input Tokens | Est. Output Tokens |
+|-------|-------------------|-------------------|
+| Watcher + Intake | [N] | [N] |
+| Estimator | [N] | [N] |
+| EU Compliance | [N] | [N] |
+| Architect | [N] | [N] |
+| Solution Design | [N] | [N] |
+| QA Agent | [N] | [N] |
+| Developer Swarm | [N] | [N] |
+| QA Validation | [N] | [N] |
+| Code Quality + Security | [N] | [N] |
+| Git Agent | [N] | [N] |
+
+<details>
+<summary>Machine-readable JSON (for <code>/pipeline:cost-report</code>)</summary>
+
+\`\`\`json
+{
+  "issue": $ISSUE_NUMBER,
+  "run_id": "$RUN_ID",
+  "model": "[MODEL_NAME]",
+  "pipeline_start": "$PIPELINE_START",
+  "pipeline_end": "$PIPELINE_END",
+  "input_tokens": [INPUT_TOKENS],
+  "output_tokens": [OUTPUT_TOKENS],
+  "total_tokens": [TOTAL_TOKENS],
+  "cost_usd": [COST_USD],
+  "agents": {
+    "watcher_intake": {"input": [N], "output": [N]},
+    "estimator": {"input": [N], "output": [N]},
+    "eu_compliance": {"input": [N], "output": [N]},
+    "architect": {"input": [N], "output": [N]},
+    "solution_design": {"input": [N], "output": [N]},
+    "qa_author": {"input": [N], "output": [N]},
+    "dev_swarm": {"input": [N], "output": [N]},
+    "qa_validation": {"input": [N], "output": [N]},
+    "code_quality_security": {"input": [N], "output": [N]},
+    "git_agent": {"input": [N], "output": [N]}
+  }
+}
+\`\`\`
+
+</details>
+COSTEOF
+
+gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO --body-file "$BODY_FILE"
+rm "$BODY_FILE"
+scripts/pipeline/log.sh "Git Agent" "Cost summary posted" PASS
+```
+
 ## Commit Message Convention
 ```
 feat(issue-$ISSUE_NUMBER): [feature title]

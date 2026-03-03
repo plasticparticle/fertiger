@@ -202,6 +202,19 @@ to detect drift from `$PIPELINE_DOCS_DIR/COMPLIANCE.md`.
 
 ---
 
+## Cost Reporting
+
+### cost-report.sh
+**Purpose:** Read `<!-- pipeline-agent:cost-summary -->` comments from GitHub Issues and produce an aggregated token cost table across features.
+**Usage:** `scripts/pipeline/cost-report.sh [ISSUE_NUMBER] [--json]`
+**Arguments:**
+- `ISSUE_NUMBER` — optional; filter to a single issue (omit for all issues)
+- `--json` — output raw JSON array instead of a formatted table
+**Env required:** `GITHUB_REPO` (from `.claude/config.sh`)
+**Used by:** `/pipeline:cost-report` command
+
+---
+
 ## Pipeline Control
 
 ### cancel-pipeline.sh
