@@ -16,82 +16,104 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 source "$ROOT_DIR/.claude/config.sh"
 
-# 1. Project board: items with status "Ready"
-READY_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
+# --- Helper: ensure a variable holds valid JSON, default to fallback if not ---
+ensure_json() {
+  local val="$1" fallback="$2"
+  # Empty string or whitespace-only → use fallback
+  if [ -z "${val// /}" ]; then
+    printf '%s' "$fallback"
+    return
+  fi
+  # Check it parses as valid JSON
+  if printf '%s' "$val" | jq 'empty' 2>/dev/null; then
+    printf '%s' "$val"
+  else
+    printf '%s' "$fallback"
+  fi
+}
+
+# --- Fetch project board once (avoids 3× rate-limit cost) ---
+BOARD_JSON=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
   --owner "$GITHUB_PROJECT_OWNER" \
   --format json \
-  --limit 50 2>/dev/null \
+  --limit 50 2>/dev/null)
+
+# If gh failed (rate limit, network, auth), treat board as empty
+BOARD_JSON=$(ensure_json "$BOARD_JSON" '{"items":[]}')
+
+# 1. Items with status "Ready"
+READY_ISSUES=$(printf '%s' "$BOARD_JSON" \
   | jq '[.items[] | select(.status == "Ready" and .content.number != null) | {
       id: .id,
       number: .content.number,
       title: .title,
       url: (.content.url // "")
-    }]' 2>/dev/null || echo '[]')
+    }]' 2>/dev/null)
+READY_ISSUES=$(ensure_json "$READY_ISSUES" '[]')
 
-# 2. Project board: items with status "Approved" (human moved from Awaiting Approval)
-APPROVED_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
-  --owner "$GITHUB_PROJECT_OWNER" \
-  --format json \
-  --limit 50 2>/dev/null \
+# 2. Items with status "Approved" (human moved from Awaiting Approval)
+APPROVED_ISSUES=$(printf '%s' "$BOARD_JSON" \
   | jq '[.items[] | select(.status == "Approved" and .content.number != null) | {
       id: .id,
       number: .content.number,
       title: .title,
       url: (.content.url // "")
-    }]' 2>/dev/null || echo '[]')
+    }]' 2>/dev/null)
+APPROVED_ISSUES=$(ensure_json "$APPROVED_ISSUES" '[]')
 
 # 3. Intake-resumed: Blocked issues where a human replied to intake-questions
-# Query project board for issues with status "Blocked", then check for a human reply
-# to the intake-questions comment.
 INTAKE_RESUMED='[]'
-BLOCKED_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
-  --owner "$GITHUB_PROJECT_OWNER" \
-  --format json \
-  --limit 50 2>/dev/null \
+BLOCKED_ISSUES=$(printf '%s' "$BOARD_JSON" \
   | jq '[.items[] | select(.status == "Blocked" and .content.number != null) | {
       number: .content.number,
       title: .title,
       url: (.content.url // "")
-    }]' 2>/dev/null || echo '[]')
-BLOCKED_N=$(echo "$BLOCKED_ISSUES" | jq 'length')
+    }]' 2>/dev/null)
+BLOCKED_ISSUES=$(ensure_json "$BLOCKED_ISSUES" '[]')
+
+BLOCKED_N=$(printf '%s' "$BLOCKED_ISSUES" | jq 'length' 2>/dev/null)
+BLOCKED_N="${BLOCKED_N:-0}"
+
 b=0
 while [ "$b" -lt "$BLOCKED_N" ]; do
-  B_NUM=$(echo "$BLOCKED_ISSUES"   | jq -r ".[$b].number")
-  B_TITLE=$(echo "$BLOCKED_ISSUES" | jq -r ".[$b].title // \"\"")
-  B_URL=$(echo "$BLOCKED_ISSUES"   | jq -r ".[$b].url // \"\"")
+  B_NUM=$(printf '%s' "$BLOCKED_ISSUES"   | jq -r ".[$b].number")
+  B_TITLE=$(printf '%s' "$BLOCKED_ISSUES" | jq -r ".[$b].title // \"\"")
+  B_URL=$(printf '%s' "$BLOCKED_ISSUES"   | jq -r ".[$b].url // \"\"")
 
-  COMMENTS=$(gh api "repos/$GITHUB_REPO/issues/$B_NUM/comments" 2>/dev/null || echo '[]')
-
+  COMMENTS_RAW=$(gh api "repos/$GITHUB_REPO/issues/$B_NUM/comments" 2>/dev/null)
+  COMMENTS=$(ensure_json "$COMMENTS_RAW" '[]')
 
   # Only process issues that have an intake-questions comment
-  HAS_Q=$(echo "$COMMENTS" | \
-    jq '[.[] | .body | test("pipeline-agent:intake-questions")] | any')
+  HAS_Q=$(printf '%s' "$COMMENTS" | \
+    jq '[.[] | .body | test("pipeline-agent:intake-questions")] | any' 2>/dev/null)
 
   if [ "$HAS_Q" = "true" ]; then
-    Q_TS=$(echo "$COMMENTS" | jq -r \
+    Q_TS=$(printf '%s' "$COMMENTS" | jq -r \
       '[.[] | select(.body | test("pipeline-agent:intake-questions"))] | last | .created_at // ""')
 
     # Human reply = any comment after the questions comment whose body does
     # NOT start with a pipeline-agent marker.
-    HAS_REPLY=$(echo "$COMMENTS" | jq \
+    HAS_REPLY=$(printf '%s' "$COMMENTS" | jq \
       --arg ts "$Q_TS" \
-      '[.[] | select(.created_at > $ts and (.body | test("pipeline-agent:") | not))] | any')
+      '[.[] | select(.created_at > $ts and (.body | test("pipeline-agent:") | not))] | any' \
+      2>/dev/null)
 
     if [ "$HAS_REPLY" = "true" ]; then
-      INTAKE_RESUMED=$(echo "$INTAKE_RESUMED" | jq \
+      INTAKE_RESUMED=$(printf '%s' "$INTAKE_RESUMED" | jq \
         --argjson n "$B_NUM" \
         --arg title "$B_TITLE" \
         --arg url   "$B_URL" \
-        '. + [{id:null, number:$n, title:$title, url:$url}]')
+        '. + [{id:null, number:$n, title:$title, url:$url}]' 2>/dev/null)
+      INTAKE_RESUMED=$(ensure_json "$INTAKE_RESUMED" '[]')
     fi
   fi
 
   b=$((b + 1))
 done
 
-READY_COUNT=$(echo "$READY_ISSUES"   | jq 'length')
-APPROVED_COUNT=$(echo "$APPROVED_ISSUES" | jq 'length')
-INTAKE_RESUMED_COUNT=$(echo "$INTAKE_RESUMED" | jq 'length')
+READY_COUNT=$(printf '%s' "$READY_ISSUES"       | jq 'length' 2>/dev/null); READY_COUNT="${READY_COUNT:-0}"
+APPROVED_COUNT=$(printf '%s' "$APPROVED_ISSUES" | jq 'length' 2>/dev/null); APPROVED_COUNT="${APPROVED_COUNT:-0}"
+INTAKE_RESUMED_COUNT=$(printf '%s' "$INTAKE_RESUMED" | jq 'length' 2>/dev/null); INTAKE_RESUMED_COUNT="${INTAKE_RESUMED_COUNT:-0}"
 
 # Emit structured JSON
 jq -n \
