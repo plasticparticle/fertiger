@@ -43,10 +43,10 @@ fi
 
 ```bash
 source .claude/config.sh
-TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
-HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels \
-  --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
-[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+_TRIAGE=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh --explain 2>/dev/null \
+  || printf 'STANDARD\nREASONS: fallback')
+TRIAGE_LEVEL=$(printf '%s\n' "$_TRIAGE" | head -1)
+TRIAGE_REASONS=$(printf '%s\n' "$_TRIAGE" | sed -n 's/^REASONS: //p')
 ```
 
 Test suite by triage level:

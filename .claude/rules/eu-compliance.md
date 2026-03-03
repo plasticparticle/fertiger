@@ -49,12 +49,11 @@ fi
 ```bash
 source .claude/config.sh
 scripts/pipeline/log.sh "EU Compliance" "Starting — Issue #$ISSUE_NUMBER" AGENT
-# Determine analysis depth before starting expensive regulatory review
-TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
-# Override: pipeline:full-review label forces full analysis
-HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
-[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
-scripts/pipeline/log.sh "EU Compliance" "Triage: $TRIAGE_LEVEL" STEP
+_TRIAGE=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh --explain 2>/dev/null \
+  || printf 'STANDARD\nREASONS: fallback')
+TRIAGE_LEVEL=$(printf '%s\n' "$_TRIAGE" | head -1)
+TRIAGE_REASONS=$(printf '%s\n' "$_TRIAGE" | sed -n 's/^REASONS: //p')
+scripts/pipeline/log.sh "EU Compliance" "Triage: $TRIAGE_LEVEL — $TRIAGE_REASONS" STEP
 ```
 
 **Fast path (TRIVIAL):** Skip deep regulatory triage — post a brief note that no regulated-data concerns were detected and proceed to Architecture without full 16-regulation assessment.
@@ -258,7 +257,7 @@ gh issue comment $ISSUE_NUMBER \
 <!-- pipeline-agent:eu-compliance -->
 ## ⚖️ EU Compliance Agent — Legal Memo
 
-**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
+**Triage:** $TRIAGE_LEVEL — $TRIAGE_REASONS
 
 ### Executive Summary
 [3 sentences maximum: what the feature does, key regulatory risk profile, overall verdict]

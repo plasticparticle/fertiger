@@ -69,12 +69,11 @@ fi
 ```bash
 source .claude/config.sh
 scripts/pipeline/log.sh "Code Quality" "Starting — Issue #$ISSUE_NUMBER" AGENT
-# Determine analysis depth before starting quality review
-TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
-# Override: pipeline:full-review label forces full analysis
-HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
-[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
-scripts/pipeline/log.sh "Code Quality" "Triage: $TRIAGE_LEVEL" STEP
+_TRIAGE=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh --explain 2>/dev/null \
+  || printf 'STANDARD\nREASONS: fallback')
+TRIAGE_LEVEL=$(printf '%s\n' "$_TRIAGE" | head -1)
+TRIAGE_REASONS=$(printf '%s\n' "$_TRIAGE" | sed -n 's/^REASONS: //p')
+scripts/pipeline/log.sh "Code Quality" "Triage: $TRIAGE_LEVEL — $TRIAGE_REASONS" STEP
 ```
 
 **Fast path (TRIVIAL):** Skip automated lint/type-check — review changed files only for obvious violations. Post abbreviated quality comment.
@@ -105,7 +104,7 @@ gh issue comment $ISSUE_NUMBER \
 <!-- pipeline-agent:code-quality -->
 ## 🔬 Code Quality Agent — Review
 
-**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
+**Triage:** $TRIAGE_LEVEL — $TRIAGE_REASONS
 
 ### Automated Checks
 | Check | Result |
@@ -186,12 +185,11 @@ _(Started comment is posted at the top of this file — Step 0 above.)_
 ```bash
 source .claude/config.sh
 scripts/pipeline/log.sh "Security" "Starting — Issue #$ISSUE_NUMBER" AGENT
-# Determine analysis depth before starting security review
-TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
-# Override: pipeline:full-review label forces full analysis
-HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
-[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
-scripts/pipeline/log.sh "Security" "Triage: $TRIAGE_LEVEL" STEP
+_TRIAGE=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh --explain 2>/dev/null \
+  || printf 'STANDARD\nREASONS: fallback')
+TRIAGE_LEVEL=$(printf '%s\n' "$_TRIAGE" | head -1)
+TRIAGE_REASONS=$(printf '%s\n' "$_TRIAGE" | sed -n 's/^REASONS: //p')
+scripts/pipeline/log.sh "Security" "Triage: $TRIAGE_LEVEL — $TRIAGE_REASONS" STEP
 ```
 
 **Fast path (TRIVIAL):** Run automated scans only — skip manual OWASP checklist review if no high-risk areas touched.
@@ -223,7 +221,7 @@ gh issue comment $ISSUE_NUMBER \
 <!-- pipeline-agent:security -->
 ## 🔒 Security Agent — Audit
 
-**Triage:** $TRIAGE_LEVEL — [reason: trivial/standard/complex based on file count and keywords]
+**Triage:** $TRIAGE_LEVEL — $TRIAGE_REASONS
 
 ### Automated Scan Results
 | Tool | Result | Findings |

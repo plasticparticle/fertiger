@@ -96,9 +96,25 @@ BRANCH_NAME=$(scripts/pipeline/checkout-branch.sh)
 
 ### triage.sh
 **Purpose:** Determine analysis depth (TRIVIAL / STANDARD / COMPLEX) for an issue.
-**Usage:** `TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh)`
-**Returns:** `TRIVIAL`, `STANDARD`, or `COMPLEX` on stdout
-**Used by:** eu-compliance, architect, solution-design, qa, code-quality, security
+Checks the `pipeline:full-review` label internally — callers do NOT need to re-check it.
+**Usage:**
+```bash
+# Plain mode (backward-compatible — level only):
+TRIAGE_LEVEL=$(ISSUE_NUMBER=$N sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
+
+# Explain mode (level + reasons — used by all pipeline agents):
+_TRIAGE=$(ISSUE_NUMBER=$N sh scripts/pipeline/triage.sh --explain 2>/dev/null \
+  || printf 'STANDARD\nREASONS: fallback')
+TRIAGE_LEVEL=$(printf '%s\n' "$_TRIAGE" | head -1)
+TRIAGE_REASONS=$(printf '%s\n' "$_TRIAGE" | sed -n 's/^REASONS: //p')
+```
+**Output (--explain):** Line 1 = level; Line 2 = `REASONS: <semicolon-separated factors>`
+**Factors reported:** keyword matches (API, auth, database, migration, GDPR, service, EU,
+  personal data), file counts, API small-scope exception, forced overrides.
+**Overrides:** `TRIAGE_FULL_REVIEW=1` env var or `pipeline:full-review` label → COMPLEX.
+**Offline/test mode:** `--offline` flag reads `TRIAGE_CREATE_COUNT`, `TRIAGE_MODIFY_COUNT`,
+  `TRIAGE_KEYWORDS` env vars instead of calling the GitHub API.
+**Used by:** eu-compliance, architect, solution-design, qa, code-quality, security, estimator
 
 ---
 

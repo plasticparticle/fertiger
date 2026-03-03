@@ -12,11 +12,10 @@ Feature file status is `QA_COMPLETE`.
 
 ```bash
 source .claude/config.sh
-# Determine analysis depth before starting quality review
-TRIAGE_LEVEL=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh 2>/dev/null || echo "STANDARD")
-# Override: pipeline:full-review label forces full analysis
-HAS_FULL_REVIEW=$(gh issue view $ISSUE_NUMBER --repo $GITHUB_REPO --json labels --jq '[.labels[].name] | contains(["pipeline:full-review"])' 2>/dev/null || echo "false")
-[ "$HAS_FULL_REVIEW" = "true" ] && TRIAGE_LEVEL="COMPLEX"
+_TRIAGE=$(ISSUE_NUMBER=$ISSUE_NUMBER sh scripts/pipeline/triage.sh --explain 2>/dev/null \
+  || printf 'STANDARD\nREASONS: fallback')
+TRIAGE_LEVEL=$(printf '%s\n' "$_TRIAGE" | head -1)
+TRIAGE_REASONS=$(printf '%s\n' "$_TRIAGE" | sed -n 's/^REASONS: //p')
 ```
 
 **Fast path (TRIVIAL):** Skip automated lint/type-check — review changed files only for obvious violations. Post abbreviated quality comment.
