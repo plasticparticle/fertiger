@@ -34,9 +34,11 @@ npm run build           # compile
 ```
 
 ## Pipeline Overview
-The Git Watcher Agent polls the GitHub Project for issues with status `Ready`.
-When found, it triggers the full pipeline. Every agent communicates exclusively
-through GitHub Issue comments and labels — no local state files.
+The Git Watcher Agent monitors the GitHub Project for issues with status `Ready`.
+It uses webhook mode by default (event-driven via `gh webhook forward`, fires within
+seconds) and falls back to polling (60-second interval) when prerequisites are absent.
+When a ready issue is found, it triggers the full pipeline. Every agent communicates
+exclusively through GitHub Issue comments and labels — no local state files.
 
 ```
 [GIT WATCHER] detects issue with status "Ready"

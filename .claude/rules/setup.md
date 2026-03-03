@@ -37,6 +37,43 @@ If `project` scope is missing, stop and instruct the user:
 Then re-run /pipeline:setup.
 ```
 
+### Step 1b: Check Webhook Prerequisites
+
+Check whether the optional webhook dependencies are available. These enable event-driven
+mode (fires within seconds); without them the watcher falls back to polling (60s interval).
+
+```bash
+# Check gh CLI version — webhook forward requires v2.32.0+
+GH_RAW_VERSION=$(gh --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+GH_MAJOR=$(echo "$GH_RAW_VERSION" | cut -d. -f1)
+GH_MINOR=$(echo "$GH_RAW_VERSION" | cut -d. -f2)
+if [ "$GH_MAJOR" -gt 2 ] || { [ "$GH_MAJOR" -eq 2 ] && [ "$GH_MINOR" -ge 32 ]; }; then
+  WEBHOOK_GH_OK="yes ($GH_RAW_VERSION)"
+else
+  WEBHOOK_GH_OK="no ($GH_RAW_VERSION — need 2.32.0+)"
+fi
+
+# Check python3
+if command -v python3 >/dev/null 2>&1; then
+  WEBHOOK_PYTHON_OK="yes ($(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'))"
+else
+  WEBHOOK_PYTHON_OK="no (python3 not found)"
+fi
+
+# Report
+echo "Webhook mode prerequisites:"
+echo "  gh v2.32.0+: $WEBHOOK_GH_OK"
+echo "  python3:     $WEBHOOK_PYTHON_OK"
+```
+
+Print the results but **do not block setup** if webhook prerequisites are missing — the watcher
+falls back to polling automatically. Only print an advisory note:
+
+```
+ℹ️  Webhook mode will be unavailable — watcher will use polling (60s interval).
+    To enable event-driven mode later, install python3 and upgrade gh to v2.32.0+.
+```
+
 ---
 
 ## Step 2: Auto-Detect Repository
@@ -309,6 +346,8 @@ Labels:        pipeline:ready, pipeline:blocked, pipeline:approved, pipeline:don
 Tech Lead:     @{TECH_LEAD}
 
 Config written to: .claude/config.sh (gitignored ✅)
+
+Watcher mode:  {WEBHOOK ✅ (event-driven, ~0s latency) | POLLING ⚠️ (60s interval — install python3 and upgrade gh to v2.32.0+ for webhook mode)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Next step: create an issue and run

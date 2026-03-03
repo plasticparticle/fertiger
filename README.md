@@ -105,7 +105,9 @@ All agent output lives as structured comments on your GitHub Issue, creating a p
 
 - [Claude Code](https://claude.ai/code) installed and authenticated
 - **Claude model: Sonnet or Opus** — Haiku is not recommended. The agents (particularly EU Compliance, Architect, and the Developer Swarm) require sustained multi-step reasoning across large contexts. Haiku will technically run but will produce shallow output and miss steps. Sonnet 4.5+ is the minimum for reliable results; Opus gives the best quality at higher cost.
-- [GitHub CLI](https://cli.github.com/) (`gh`) installed — see Step 1 below
+- [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated — see Step 1 below
+  - **v2.32.0 or later** is required for webhook mode (event-driven, fires within seconds). Check your version: `gh --version`. Older versions fall back to polling automatically.
+- **`python3`** available on your PATH — required for the webhook event listener. Check: `python3 --version`. Without it the watcher falls back to polling (60-second interval).
 - A GitHub repository (the pipeline configures the Project board for you)
 - Node.js + npm project (adapt commands for other runtimes)
 
@@ -234,6 +236,29 @@ claude "/pipeline:watch"
 ```
 
 Runs for up to 8 hours. Re-run it in the morning like you re-run yourself.
+
+The watcher uses **webhook mode by default** — event-driven, fires within seconds of a label
+change. It requires `gh` v2.32.0+ and `python3`. If either is unavailable, it falls back to
+polling (60-second interval) automatically — no configuration needed either way.
+
+You can tell which mode is active from the startup log:
+
+```
+[watcher] Webhook mode started at 2026-03-03T12:00:00Z
+[watcher] Repo: your-org/your-repo | Port: 9867 | Idle timeout: 28800s
+```
+or, if webhook prerequisites are missing:
+```
+[watcher] gh webhook forward not available — falling back to polling
+[watcher] Started at 2026-03-03T12:00:00Z
+[watcher] Repo: your-org/your-repo | Project: #1
+```
+
+To force polling explicitly (e.g. for testing):
+
+```bash
+bash .claude/scripts/watch.sh
+```
 
 ### Trigger a specific issue manually
 
