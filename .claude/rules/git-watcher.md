@@ -173,8 +173,9 @@ For each issue in `.approved[]`:
 ISSUE_NUMBER=<number from .approved[].number>
 export ISSUE_NUMBER
 
-# Remove the approved label so this issue isn't picked up again
-gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --remove-label "pipeline:approved"
+# Advance status from Approved → In Development — this consumes the "Approved"
+# state so the issue is not re-detected on the next heartbeat poll.
+scripts/pipeline/set-status.sh IN_DEVELOPMENT
 
 # Post a resumption comment
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \

@@ -1,4 +1,4 @@
-Resume a pipeline after human approval (pipeline:approved label has been added).
+Resume a pipeline after human approval (issue status has been set to Approved on the project board).
 Runs: QA Test Writing → Dev Swarm → QA Validation → Code Quality → Security → Git PR.
 Example: `/pipeline:resume 42`
 
@@ -15,8 +15,10 @@ Then run:
 ```bash
 source .claude/config.sh
 ISSUE_NUMBER=$ARGUMENTS
+# Advance status from Approved → In Development so the watcher won't re-detect this issue
+scripts/pipeline/set-status.sh IN_DEVELOPMENT
 ```
 
-Verify the issue has the `pipeline:approved` label before proceeding. Read all
+Verify the issue is in `Approved` or `In Development` status before proceeding. Read all
 existing issue comments to understand the current pipeline state, then continue
 from the QA Test Writing stage.

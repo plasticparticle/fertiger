@@ -53,7 +53,7 @@ exclusively through GitHub Issue comments and labels — no local state files.
       ↓
 [SOLUTION DESIGN] → posts comment, sets status: Awaiting Approval
       ↓
-⏸ HUMAN APPROVAL  ← adds label `pipeline:approved` to continue
+⏸ HUMAN APPROVAL  ← sets status to `Approved` on project board to continue
       ↓
 [QA AGENT]      → writes tests, sets status: In Development
       ↓
@@ -71,14 +71,13 @@ exclusively through GitHub Issue comments and labels — no local state files.
 ## GitHub Project Board — Required Status Field Values
 Configure these as options in your GitHub Project's "Status" field:
 `Backlog` | `Ready` | `Intake` | `Legal Review` | `Architecture` |
-`Solution Design` | `Awaiting Approval` | `In Development` | `QA Review` |
+`Solution Design` | `Awaiting Approval` | `Approved` | `In Development` | `QA Review` |
 `Code Review` | `Security Review` | `Ready for Merge` | `Done`
 
 ## GitHub Labels — Required Labels in Repo
 Create these labels in the repo:
 - `pipeline:ready`      — human adds to trigger pipeline
 - `pipeline:blocked`    — agent sets when stuck
-- `pipeline:approved`   — human adds to approve development
 - `pipeline:done`       — pipeline complete
 - `compliance:drift`    — created automatically by `/agent:compliance-audit` when drift is found
 
@@ -123,8 +122,8 @@ Reusable scripts live in `scripts/pipeline/`. Full docs: `scripts/pipeline/SCRIP
    tags the issue author with `@username`, waits. Pipeline resumes when
    the author replies (watcher detects the reply).
 2. **Development approval** — After Solution Design, status is set to
-   `Awaiting Approval`. Pipeline resumes ONLY when a human adds the
-   label `pipeline:approved` to the issue.
+   `Awaiting Approval`. Pipeline resumes when a human changes the status
+   to **`Approved`** on the project board.
 
 ## Settings
 ```json

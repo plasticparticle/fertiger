@@ -59,7 +59,7 @@ Test suite by triage level:
 ## Mode 1: Test Author
 
 ### Trigger
-Issue has `pipeline:approved` label AND project status is `In Development`.
+Issue project status is `In Development` (watcher advances status from `Approved` → `In Development` before invoking QA).
 
 ### Step 1: Fetch Only What You Need
 

@@ -18,13 +18,13 @@ if [ -z "$ISSUE_NUMBER" ]; then
 fi
 
 # Remove pipeline labels — ignore errors if the label is not present on the issue
-for LABEL in "pipeline:ready" "pipeline:blocked" "pipeline:approved"; do
+for LABEL in "pipeline:ready" "pipeline:blocked"; do
   gh issue edit "$ISSUE_NUMBER" \
     --repo "$GITHUB_REPO" \
     --remove-label "$LABEL" 2>/dev/null || true
 done
 
-echo "Labels removed: pipeline:ready, pipeline:blocked, pipeline:approved"
+echo "Labels removed: pipeline:ready, pipeline:blocked"
 
 # Reset project status to Backlog
 scripts/pipeline/set-status.sh BACKLOG

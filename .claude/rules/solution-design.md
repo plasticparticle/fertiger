@@ -135,24 +135,24 @@ CREATE  tests/unit/feature-name/model.test.ts
 
 ---
 ⏸ **Awaiting human approval before development begins.**
-Tag this issue with `pipeline:approved` to proceed.
+Change this issue's **Status** to **`Approved`** on the project board to proceed.
 EOF
 )"
 ```
 
 ## Step 4: Set Awaiting Approval Status
 ```bash
-scripts/pipeline/log.sh "Solution Design" "Plan posted — awaiting human approval (pipeline:approved label)" PASS
+scripts/pipeline/log.sh "Solution Design" "Plan posted — awaiting human approval (set Status to Approved on project board)" PASS
 scripts/pipeline/set-status.sh AWAITING_APPROVAL
 
 # Tag the issue author so they know approval is needed
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
-  --body "@{ISSUE_AUTHOR} @{TECH_LEAD} — The development plan above is ready for your review. Add the label **\`pipeline:approved\`** to this issue to start development, or leave feedback as a comment."
+  --body "@{ISSUE_AUTHOR} @{TECH_LEAD} — The development plan above is ready for your review. Change this issue's **Status** to **\`Approved\`** on the project board to start development, or leave feedback as a comment."
 ```
 
-The pipeline is now paused. When `pipeline:approved` is added, the watcher detects it
-and resumes from QA Test Writing — no manual agent invocation needed.
+The pipeline is now paused. When the status is changed to `Approved` on the project board,
+the watcher detects it and resumes from QA Test Writing — no manual agent invocation needed.
 
 ## Rules
 - Every file in the file list must map to at least one requirement

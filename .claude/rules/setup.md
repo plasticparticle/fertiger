@@ -179,31 +179,42 @@ gh project field-create $GITHUB_PROJECT_NUMBER \
 The pipeline requires these options in this order:
 ```
 Backlog | Ready | Intake | Legal Review | Architecture | Solution Design
-| Awaiting Approval | In Development | QA Review | Code Review
+| Awaiting Approval | Approved | In Development | QA Review | Code Review
 | Security Review | Ready for Merge | Done
 ```
 
-Check which options already exist. For each missing option, add it via the GraphQL API:
+Use `updateProjectV2Field` with the full `singleSelectOptions` list to set all options
+at once (GitHub does not expose a per-option add mutation). This replaces all options, so
+pass every option including the ones that already exist. After the call, re-fetch the field
+to capture the new option IDs — GitHub assigns fresh IDs on each full replacement.
 
 ```bash
 gh api graphql -f query='
-  mutation($fieldId: ID!, $name: String!, $color: ProjectV2SingleSelectFieldOptionColor!) {
-    addProjectV2SingleSelectFieldOption(input: {
-      fieldId: $fieldId
-      name: $name
-      color: $color
-    }) {
-      field {
-        ... on ProjectV2SingleSelectField {
-          options { id name }
-        }
-      }
+mutation {
+  updateProjectV2Field(input: {
+    fieldId: "'"$STATUS_FIELD_ID"'",
+    singleSelectOptions: [
+      {name: "Backlog",           color: GRAY,   description: ""},
+      {name: "Ready",             color: BLUE,   description: ""},
+      {name: "Intake",            color: PURPLE, description: ""},
+      {name: "Legal Review",      color: YELLOW, description: ""},
+      {name: "Architecture",      color: ORANGE, description: ""},
+      {name: "Solution Design",   color: ORANGE, description: ""},
+      {name: "Awaiting Approval", color: YELLOW, description: ""},
+      {name: "Approved",          color: GREEN,  description: ""},
+      {name: "In Development",    color: GREEN,  description: ""},
+      {name: "QA Review",         color: BLUE,   description: ""},
+      {name: "Code Review",       color: PURPLE, description: ""},
+      {name: "Security Review",   color: RED,    description: ""},
+      {name: "Ready for Merge",   color: GREEN,  description: ""},
+      {name: "Done",              color: GRAY,   description: ""}
+    ]
+  }) {
+    projectV2Field {
+      ... on ProjectV2SingleSelectField { options { id name } }
     }
   }
-' \
-  -f fieldId="$STATUS_FIELD_ID" \
-  -f name="Ready" \
-  -f color="BLUE"
+}'
 ```
 
 Use these colors:
@@ -216,6 +227,7 @@ Use these colors:
 | Architecture | ORANGE |
 | Solution Design | ORANGE |
 | Awaiting Approval | YELLOW |
+| Approved | GREEN |
 | In Development | GREEN |
 | QA Review | BLUE |
 | Code Review | PURPLE |
@@ -239,7 +251,7 @@ gh project field-list $GITHUB_PROJECT_NUMBER \
 Store:
 - `STATUS_FIELD_ID` — the field node ID
 - `PROJECT_NODE_ID` — the project node ID
-- One variable per option ID, e.g. `BACKLOG_OPTION_ID`, `READY_OPTION_ID`, etc.
+- One variable per option ID, e.g. `BACKLOG_OPTION_ID`, `READY_OPTION_ID`, `APPROVED_OPTION_ID`, etc.
 
 ---
 
@@ -259,9 +271,6 @@ gh label create "pipeline:ready"    --repo $GITHUB_REPO --color "0075ca" \
 
 gh label create "pipeline:blocked"  --repo $GITHUB_REPO --color "e4e669" \
   --description "Pipeline is waiting for human input" 2>/dev/null || echo "already exists"
-
-gh label create "pipeline:approved" --repo $GITHUB_REPO --color "0e8a16" \
-  --description "Approved for development" 2>/dev/null || echo "already exists"
 
 gh label create "pipeline:done"     --repo $GITHUB_REPO --color "6f42c1" \
   --description "Pipeline complete, PR created" 2>/dev/null || echo "already exists"
@@ -296,6 +305,7 @@ export LEGAL_REVIEW_OPTION_ID="$LEGAL_REVIEW_OPTION_ID"
 export ARCHITECTURE_OPTION_ID="$ARCHITECTURE_OPTION_ID"
 export SOLUTION_DESIGN_OPTION_ID="$SOLUTION_DESIGN_OPTION_ID"
 export AWAITING_APPROVAL_OPTION_ID="$AWAITING_APPROVAL_OPTION_ID"
+export APPROVED_OPTION_ID="$APPROVED_OPTION_ID"
 export IN_DEVELOPMENT_OPTION_ID="$IN_DEVELOPMENT_OPTION_ID"
 export QA_REVIEW_OPTION_ID="$QA_REVIEW_OPTION_ID"
 export CODE_REVIEW_OPTION_ID="$CODE_REVIEW_OPTION_ID"
@@ -342,7 +352,7 @@ Print a summary to the user:
 Repository:    {GITHUB_REPO}
 Project:       #{GITHUB_PROJECT_NUMBER} — {project title}
 Status field:  {STATUS_FIELD_ID}
-Labels:        pipeline:ready, pipeline:blocked, pipeline:approved, pipeline:done
+Labels:        pipeline:ready, pipeline:blocked, pipeline:done
 Tech Lead:     @{TECH_LEAD}
 
 Config written to: .claude/config.sh (gitignored ✅)

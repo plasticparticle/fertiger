@@ -41,12 +41,17 @@ READY_LABELED=$(gh issue list \
 READY_ISSUES=$(jq -s '(.[0] + .[1]) | unique_by(.number)' \
   <(echo "$READY_PROJECT") <(echo "$READY_LABELED"))
 
-# 3. pipeline:approved label (resume after human approval)
-APPROVED_ISSUES=$(gh issue list \
-  --repo "$GITHUB_REPO" \
-  --label "pipeline:approved" \
-  --json number,title,labels \
-  --state open 2>/dev/null || echo '[]')
+# 3. Project board: items with status "Approved" (human moved from Awaiting Approval)
+APPROVED_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
+  --owner "$GITHUB_PROJECT_OWNER" \
+  --format json \
+  --limit 50 2>/dev/null \
+  | jq '[.items[] | select(.status == "Approved" and .content.number != null) | {
+      id: .id,
+      number: .content.number,
+      title: .title,
+      url: (.content.url // "")
+    }]' 2>/dev/null || echo '[]')
 
 # 4. Intake-resumed: blocked issues where a human replied to intake-questions
 # For each pipeline:blocked issue that has an intake-questions comment, check

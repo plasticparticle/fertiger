@@ -97,7 +97,7 @@ sleep 1  # allow Python to bind the port before gh connects
 start_gh_forwarder() {
   gh webhook forward \
     --repo "$GITHUB_REPO" \
-    --events="issues,issue_comment" \
+    --events="issues,issue_comment" \   # project status changes caught by heartbeat poll
     --url="http://localhost:$WEBHOOK_PORT" \
     >"$GH_LOG" 2>&1 &
   GH_FWD_PID=$!
@@ -145,10 +145,21 @@ while true; do
   fi
 
   # Heartbeat every HEARTBEAT_INTERVAL seconds — confirms watcher is alive
+  # Also polls for project board state changes (e.g. Approved) not capturable via issue webhooks
   SINCE_HEARTBEAT=$((NOW - LAST_HEARTBEAT))
   if [ "$SINCE_HEARTBEAT" -ge "$HEARTBEAT_INTERVAL" ]; then
     echo "[watcher] Alive — $(date -u +"%Y-%m-%dT%H:%M:%SZ") — idle ${IDLE}s / ${MAX_IDLE_SECONDS}s"
     LAST_HEARTBEAT="$NOW"
+
+    # Poll for state-based triggers (Approved status) — not capturable via issue webhooks
+    POLL_RESULT=$("$SCRIPT_DIR/poll-once.sh" 2>/dev/null)
+    POLL_EXIT=$?
+    if [ $((POLL_EXIT & 2)) -ne 0 ]; then
+      APPROVED_COUNT=$(echo "$POLL_RESULT" | jq -r '.approved_count // 0')
+      echo "$POLL_RESULT"
+      echo "[watcher] ACTION: $APPROVED_COUNT approved issue(s) — resume pipeline from QA"
+      LAST_ACTIVITY=$(date +%s)
+    fi
   fi
 
   # Auto-restart gh webhook forward if it exited unexpectedly
@@ -194,19 +205,6 @@ while true; do
               ready:[{id:null, number:$n, title:$title, url:$url}],
               approved:[], intake_resumed:[]}'
           echo "[watcher] ACTION: 1 ready issue(s) — hand off to intake pipeline"
-
-        elif [ "$LABEL" = "pipeline:approved" ]; then
-          echo ""
-          echo "[watcher] Event: issue #$NUMBER labeled pipeline:approved — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          jq -n \
-            --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-            --argjson n  "$NUMBER" \
-            --arg  title "$TITLE" \
-            --arg  url   "$URL" \
-            '{timestamp:$ts, ready_count:0, approved_count:1, intake_resumed_count:0,
-              ready:[], approved:[{id:null, number:$n, title:$title, url:$url}],
-              intake_resumed:[]}'
-          echo "[watcher] ACTION: 1 approved issue(s) — resume pipeline from QA"
         fi
 
       # ── issue_comment events: human replied on a blocked issue ────────────

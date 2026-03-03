@@ -209,7 +209,7 @@ to detect drift from `$PIPELINE_DOCS_DIR/COMPLIANCE.md`.
 **Usage:** `scripts/pipeline/cancel-pipeline.sh`
 **Arguments:** none
 **Env required:** `ISSUE_NUMBER` (not in config.sh — must be set manually)
-**Labels removed:** `pipeline:ready`, `pipeline:blocked`, `pipeline:approved`
+**Labels removed:** `pipeline:ready`, `pipeline:blocked`
 **Sets status:** `BACKLOG`
 **Used by:** `/pipeline:cancel` command
 

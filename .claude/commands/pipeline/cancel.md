@@ -96,7 +96,7 @@ Print a summary:
 🛑  Pipeline cancelled — Issue #$ISSUE_NUMBER
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Labels removed:  pipeline:ready, pipeline:blocked, pipeline:approved
+Labels removed:  pipeline:ready, pipeline:blocked
 Status:          → Backlog
 Branch:          $BRANCH_NAME (not deleted — remove manually if needed)
 Completed agents: $COMPLETED_AGENTS
