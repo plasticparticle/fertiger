@@ -82,11 +82,15 @@ else
       . ".claude/config.sh"
     fi
 
-    # pipeline:full-review label check lives here — agents do NOT need to repeat it
-    HAS_LABEL=$(gh issue view "$ISSUE_NUMBER" \
+    # Single gh call fetches labels + body + comments together — avoids a second round-trip
+    ISSUE_DATA=$(gh issue view "$ISSUE_NUMBER" \
       --repo "${GITHUB_REPO:-}" \
-      --json labels \
-      --jq '[.labels[].name] | contains(["pipeline:full-review"])' \
+      --json labels,body,comments \
+      2>/dev/null || echo '{"labels":[],"body":"","comments":[]}')
+
+    # pipeline:full-review label check lives here — agents do NOT need to repeat it
+    HAS_LABEL=$(printf '%s' "$ISSUE_DATA" \
+      | jq '[.labels[].name] | contains(["pipeline:full-review"])' \
       2>/dev/null || echo "false")
     if [ "$HAS_LABEL" = "true" ]; then
       add_reason "forced — pipeline:full-review label on issue"
@@ -94,10 +98,8 @@ else
       exit 0
     fi
 
-    ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" \
-      --repo "${GITHUB_REPO:-}" \
-      --json body,comments \
-      --jq '.body + " " + ([.comments[].body] | join(" "))' \
+    ISSUE_BODY=$(printf '%s' "$ISSUE_DATA" \
+      | jq -r '.body + " " + ([.comments[].body] | join(" "))' \
       2>/dev/null || echo "")
     KEYWORDS="$ISSUE_BODY"
     CREATE_COUNT="${TRIAGE_CREATE_COUNT:-0}"
