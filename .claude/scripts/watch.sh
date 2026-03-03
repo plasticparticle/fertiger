@@ -43,6 +43,21 @@ while [ "$IDLE_SECONDS" -lt "$MAX_IDLE_SECONDS" ]; do
 
   echo "$RESULT"
 
+  # Surface API errors (rate limit, auth, network) so they're visible
+  POLL_ERR_TYPE=$(printf '%s' "$RESULT" | jq -r '.error.type // empty' 2>/dev/null || true)
+  if [ -n "$POLL_ERR_TYPE" ]; then
+    POLL_ERR_MSG=$(printf '%s' "$RESULT" | jq -r '.error.message // "API error"' 2>/dev/null || true)
+    RESET_IN=$(printf '%s' "$RESULT" | jq -r '.error.reset_in_seconds // 0' 2>/dev/null || echo 0)
+    RESET_AT=$(printf '%s' "$RESULT" | jq -r '.error.reset_at // ""' 2>/dev/null || true)
+    if [ "$RESET_IN" -gt 0 ] 2>/dev/null; then
+      RESET_MINS=$(( (RESET_IN + 59) / 60 ))
+      echo "[watcher] ⚠️  WARNING: $POLL_ERR_MSG"
+      echo "[watcher] ⚠️  Rate limit resets in ~${RESET_MINS}m (at ${RESET_AT}). Board results may be incomplete."
+    else
+      echo "[watcher] ⚠️  WARNING: $POLL_ERR_MSG"
+    fi
+  fi
+
   if [ "$EXIT_CODE" -eq 0 ]; then
     IDLE_SECONDS=$((IDLE_SECONDS + POLL_INTERVAL))
     echo "[watcher] Nothing actionable. Next check in ${POLL_INTERVAL}s."

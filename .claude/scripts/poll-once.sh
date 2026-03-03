@@ -33,10 +33,42 @@ ensure_json() {
 }
 
 # --- Fetch project board once (avoids 3× rate-limit cost) ---
+BOARD_ERR_FILE=$(mktemp)
 BOARD_JSON=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
   --owner "$GITHUB_PROJECT_OWNER" \
   --format json \
-  --limit 50 2>/dev/null)
+  --limit 50 2>"$BOARD_ERR_FILE")
+BOARD_ERR=$(cat "$BOARD_ERR_FILE"); rm -f "$BOARD_ERR_FILE"
+
+# Detect and classify errors — embed in JSON so callers can surface them
+POLL_ERROR_JSON='null'
+if [ -n "$BOARD_ERR" ] || ! printf '%s' "$BOARD_JSON" | jq 'empty' 2>/dev/null; then
+  if printf '%s' "$BOARD_ERR" | grep -qi "rate limit"; then
+    # GraphQL quota exhausted — fetch reset time from REST (doesn't consume GraphQL quota)
+    RATE_RESET=$(curl -s -H "Authorization: token $(gh auth token 2>/dev/null)" \
+      https://api.github.com/rate_limit 2>/dev/null \
+      | jq -r '.resources.graphql.reset // empty' 2>/dev/null || true)
+    RESET_AT=""
+    RESET_IN=0
+    if [ -n "$RATE_RESET" ]; then
+      RESET_AT=$(date -u -d "@$RATE_RESET" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null \
+             || date -u -r  "$RATE_RESET" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || true)
+      RESET_IN=$(( RATE_RESET - $(date +%s) ))
+      [ "$RESET_IN" -lt 0 ] && RESET_IN=0
+    fi
+    POLL_ERROR_JSON=$(jq -n \
+      --arg  type     "rate_limit" \
+      --arg  message  "GitHub GraphQL API rate limit exceeded — board status unavailable" \
+      --arg  reset_at "$RESET_AT" \
+      --argjson reset_in "$RESET_IN" \
+      '{type:$type, message:$message, reset_at:$reset_at, reset_in_seconds:$reset_in}')
+  elif [ -n "$BOARD_ERR" ]; then
+    POLL_ERROR_JSON=$(jq -n \
+      --arg type    "api_error" \
+      --arg message "$BOARD_ERR" \
+      '{type:$type, message:$message}')
+  fi
+fi
 
 # If gh failed (rate limit, network, auth), treat board as empty
 BOARD_JSON=$(ensure_json "$BOARD_JSON" '{"items":[]}')
@@ -121,6 +153,7 @@ jq -n \
   --argjson ready          "$READY_ISSUES" \
   --argjson approved       "$APPROVED_ISSUES" \
   --argjson intake_resumed "$INTAKE_RESUMED" \
+  --argjson error          "$POLL_ERROR_JSON" \
   '{
     timestamp:             $ts,
     ready_count:           ($ready          | length),
@@ -128,7 +161,8 @@ jq -n \
     intake_resumed_count:  ($intake_resumed  | length),
     ready:          $ready,
     approved:       $approved,
-    intake_resumed: $intake_resumed
+    intake_resumed: $intake_resumed,
+    error:          $error
   }'
 
 # Bitmask exit code — callers use bitwise AND to check each case:

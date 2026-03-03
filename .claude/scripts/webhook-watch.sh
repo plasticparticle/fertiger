@@ -114,6 +114,19 @@ echo "[watcher] Initial poll — checking for pre-existing actionable issues..."
 INITIAL_RESULT=$("$SCRIPT_DIR/poll-once.sh" 2>&1)
 INITIAL_EXIT=$?
 echo "$INITIAL_RESULT"
+_poll_err_type=$(printf '%s' "$INITIAL_RESULT" | jq -r '.error.type // empty' 2>/dev/null || true)
+if [ -n "$_poll_err_type" ]; then
+  _poll_err_msg=$(printf '%s' "$INITIAL_RESULT" | jq -r '.error.message // "API error"' 2>/dev/null || true)
+  _reset_in=$(printf '%s' "$INITIAL_RESULT" | jq -r '.error.reset_in_seconds // 0' 2>/dev/null || echo 0)
+  _reset_at=$(printf '%s' "$INITIAL_RESULT" | jq -r '.error.reset_at // ""' 2>/dev/null || true)
+  if [ "$_reset_in" -gt 0 ] 2>/dev/null; then
+    _reset_mins=$(( (_reset_in + 59) / 60 ))
+    echo "[watcher] ⚠️  WARNING: $_poll_err_msg"
+    echo "[watcher] ⚠️  Rate limit resets in ~${_reset_mins}m (at ${_reset_at}). Board results may be incomplete."
+  else
+    echo "[watcher] ⚠️  WARNING: $_poll_err_msg"
+  fi
+fi
 if [ $((INITIAL_EXIT & 1)) -ne 0 ]; then
   READY_COUNT=$(echo "$INITIAL_RESULT" | jq -r '.ready_count // 0')
   echo "[watcher] ACTION: $READY_COUNT ready issue(s) — hand off to intake pipeline"
@@ -152,8 +165,21 @@ while true; do
     LAST_HEARTBEAT="$NOW"
 
     # Poll for project board status changes — not capturable via issue webhooks
-    POLL_RESULT=$("$SCRIPT_DIR/poll-once.sh" 2>/dev/null)
+    POLL_RESULT=$("$SCRIPT_DIR/poll-once.sh" 2>&1)
     POLL_EXIT=$?
+    _poll_err_type=$(printf '%s' "$POLL_RESULT" | jq -r '.error.type // empty' 2>/dev/null || true)
+    if [ -n "$_poll_err_type" ]; then
+      _poll_err_msg=$(printf '%s' "$POLL_RESULT" | jq -r '.error.message // "API error"' 2>/dev/null || true)
+      _reset_in=$(printf '%s' "$POLL_RESULT" | jq -r '.error.reset_in_seconds // 0' 2>/dev/null || echo 0)
+      _reset_at=$(printf '%s' "$POLL_RESULT" | jq -r '.error.reset_at // ""' 2>/dev/null || true)
+      if [ "$_reset_in" -gt 0 ] 2>/dev/null; then
+        _reset_mins=$(( (_reset_in + 59) / 60 ))
+        echo "[watcher] ⚠️  WARNING: $_poll_err_msg"
+        echo "[watcher] ⚠️  Rate limit resets in ~${_reset_mins}m (at ${_reset_at}). Board results may be incomplete."
+      else
+        echo "[watcher] ⚠️  WARNING: $_poll_err_msg"
+      fi
+    fi
     if [ "$POLL_EXIT" -ne 0 ]; then
       echo "$POLL_RESULT"
       LAST_ACTIVITY=$(date +%s)
