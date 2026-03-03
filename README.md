@@ -330,6 +330,20 @@ claude "/pipeline:resume 42"
 
 Or the watcher picks this up automatically if it's running.
 
+### Cancel a pipeline
+
+Stop the pipeline for a specific issue, remove all pipeline labels, and reset
+the project board status to Backlog:
+
+```bash
+claude "/pipeline:cancel 42"
+```
+
+The cancellation comment on the issue records when it was cancelled, which
+agents had completed, and — if a feature branch was created — the exact
+`git push origin --delete` command to clean it up. The branch is not deleted
+automatically. The issue stays open; to restart, set it back to `Ready`.
+
 ### Run a single agent
 
 Useful for spot-checks or debugging a specific stage:
@@ -477,6 +491,7 @@ your-project/
 │   │   ├── resume.md          ← /pipeline:resume
 │   │   ├── report.md          ← /pipeline:report
 │   │   ├── retry-dev.md       ← /pipeline:retry-dev
+│   │   ├── cancel.md          ← /pipeline:cancel  ← halt pipeline, reset to Backlog
 │   │   └── update.md          ← /pipeline:update  ← pull latest framework files
 │   └── rules/
 │       ├── setup.md           ← one-time project provisioning agent
@@ -500,6 +515,7 @@ your-project/
 │   ├── swarm-lock.sh          ← file ownership for parallel dev agents
 │   ├── check-deps.sh          ← check for missing file dependencies
 │   ├── triage.sh              ← classify issue complexity
+│   ├── cancel-pipeline.sh     ← remove labels, reset status to Backlog
 │   └── SCRIPTS.md             ← script registry (check here before writing bash)
 ├── docs/
 │   ├── ARCHITECTURE.md        ← blank template (populated by Architect Agent per feature)
@@ -592,6 +608,9 @@ A: The pipeline escalates to human review (`pipeline:blocked` + QA escalation co
 
 **Q: Is the GDPR check actually legally sufficient?**
 A: No. It's a structured checklist that flags issues. You still need a human lawyer for anything that actually matters. The Legal Agent will remind you of this in its output.
+
+**Q: Can I cancel a pipeline mid-run?**
+A: Yes. `/pipeline:cancel 42` removes all pipeline labels, resets the board to Backlog, and posts a timestamped cancellation record on the issue. The feature branch is preserved so no work is lost. To restart from scratch, set the issue back to `Ready`.
 
 **Q: Can I run multiple issues in parallel?**
 A: Yes. The watcher processes all `Ready` issues it finds. Each issue gets its own branch and its own pipeline. The Developer Swarm also runs parallel agents within a single issue. It's agents all the way down.
