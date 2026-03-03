@@ -47,7 +47,7 @@ to post never aborts the agent's primary work. A duplicate guard prevents re-pos
 | Developer Agent | Agent (rules) | Implements code; runs as a swarm of parallel agents; uses pipeline scripts | `.claude/rules/developer.md` |
 | Code Quality Agent | Agent (rules) | Enforces ESLint, TypeScript, naming, architecture compliance | `.claude/rules/code-quality.md` |
 | Security Agent | Agent (rules) | OWASP + automated scans; updates $PIPELINE_DOCS_DIR/SECURITY.md | `.claude/rules/security.md` |
-| Git Agent | Agent (rules) | Creates PR; links to issue; sets pipeline:done | `.claude/rules/git-agent.md` |
+| Git Agent | Agent (rules) | Creates PR; links to issue; sets status: Done | `.claude/rules/git-agent.md` |
 | Setup Agent | Agent (rules) | One-time provisioning of GitHub Project, labels, config.sh | `.claude/rules/setup.md` |
 | Stack Detection Script | Pipeline script | Detects language; exports STACK_* env vars; sourced by agents | `scripts/pipeline/detect-stack.sh` |
 | Test Runner Script | Pipeline script | Abstracts test execution across stacks; accepts optional filter | `scripts/pipeline/run-tests.sh` |

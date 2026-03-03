@@ -35,7 +35,7 @@ if [ -z "$OPTION_ID" ]; then
   echo "ERROR: Unknown status '$STATUS_NAME'. No variable '$OPTION_VAR' found in config.sh." >&2
   echo "Available statuses: BACKLOG INTAKE LEGAL_REVIEW ARCHITECTURE SOLUTION_DESIGN" >&2
   echo "                    AWAITING_APPROVAL APPROVED IN_DEVELOPMENT QA_REVIEW" >&2
-  echo "                    CODE_REVIEW SECURITY_REVIEW READY_FOR_MERGE DONE" >&2
+  echo "                    CODE_REVIEW SECURITY_REVIEW READY_FOR_MERGE BLOCKED DONE" >&2
   exit 1
 fi
 

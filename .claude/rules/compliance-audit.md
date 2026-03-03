@@ -227,8 +227,8 @@ For each finding above:
 1. If the change was intentional and compliant: run `/agent:eu-compliance ISSUE_NUMBER`
    for the issue that introduced it, OR manually add the finding to COMPLIANCE.md with
    a justification comment.
-2. If the change was accidental or non-compliant: add `pipeline:blocked` to the
-   relevant issue and escalate to the DPO.
+2. If the change was accidental or non-compliant: set the relevant issue's Status
+   to `Blocked` on the project board and escalate to the DPO.
 
 Close this issue once all findings are resolved and COMPLIANCE.md is updated.
 EOF

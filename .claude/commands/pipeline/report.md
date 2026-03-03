@@ -25,14 +25,6 @@ jq '[.items[] | select(.content.number) | {
     title: .title,
     status: (.status // "No Status")
   }] | sort_by(.number)' /tmp/pipeline-items.json
-
-# Issues currently blocked
-gh issue list \
-  --repo $GITHUB_REPO \
-  --label "pipeline:blocked" \
-  --json number \
-  --state open \
-  | jq '[.[].number]'
 ```
 
 ## Step 2: Determine Active Agent
@@ -52,6 +44,7 @@ Map each issue's **Status** field to the agent currently responsible:
 | Code Review       | 🔬 Code Quality Agent                    |
 | Security Review   | 🔒 Security Agent                         |
 | Ready for Merge   | 🚀 Git Agent                              |
+| Blocked           | 🚫 Blocked — human intervention needed    |
 | Done              | ✅ Complete                               |
 | Backlog           | —  Not started                            |
 
@@ -68,9 +61,9 @@ Print this exact format, substituting real values:
 ──────┼────────────────────────────────┼─────────────────────┼────────────────────────────
   42  │ Add user authentication        │ Security Review     │ 🔒 Security Agent
   38  │ Payment integration flow       │ Awaiting Approval   │ ⏸  Human approval needed
-  35🚫│ Export feature                 │ In Development      │ 💻 Developer Swarm — BLOCKED
+  35🚫│ Export feature                 │ Blocked             │ 🚫 Blocked — human intervention needed
 
-🚫 = pipeline:blocked label is set on this issue
+🚫 = status is Blocked on the project board
 
 ──────────────────────────────────────────────────────────
   Active: 2   Awaiting human: 1   Blocked: 1   Total: 3
@@ -81,7 +74,7 @@ For details on a specific issue: /pipeline:status <number>
 
 **Formatting rules:**
 - Truncate titles to 30 characters (add `…` if cut)
-- Append 🚫 immediately after the issue number (no space) if that issue has `pipeline:blocked`
+- Append 🚫 immediately after the issue number (no space) if that issue has status `Blocked`
 - Append `— BLOCKED` after the agent name for blocked issues
 - By default, **exclude** issues with status `Done` or `Backlog` from the table
   (if `--all` was passed as $ARGUMENTS, include everything)
@@ -91,7 +84,6 @@ For details on a specific issue: /pipeline:status <number>
 **Summary line counts:**
 - **Active**: issues currently being processed by an agent (any status except
   Done, Backlog, Awaiting Approval, Ready)
-- **Awaiting human**: issues with status `Awaiting Approval` or label `pipeline:blocked`
-  but NOT actively blocked (i.e. at a human checkpoint)
-- **Blocked**: issues with `pipeline:blocked` label set
+- **Awaiting human**: issues with status `Awaiting Approval`
+- **Blocked**: issues with status `Blocked`
 - **Total**: all issues shown in the table

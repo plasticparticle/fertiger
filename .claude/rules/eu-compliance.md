@@ -316,7 +316,7 @@ PROCESSOR_AGREEMENT: required → DPA with [vendor name] before go-live
 
 ---
 [COMPLIANT: ✅ Proceeding to Architecture — branch will be created]
-[CONDITIONAL: 🟡 Mitigations required — see above — pipeline:blocked set pending human review]
+[CONDITIONAL: 🟡 Mitigations required — see above — status set to Blocked pending human review]
 [BLOCKED: 🔴 Pipeline stopped — critical legal issue requires human review before proceeding]
 EOF
 )"
@@ -350,14 +350,14 @@ git push origin $BRANCH_NAME
 
 ---
 
-## Step 9: DPO Escalation — DPIA REQUIRED or AI Act High Risk triggers pipeline:blocked
+## Step 9: DPO Escalation — DPIA REQUIRED or AI Act High Risk triggers Blocked status
 
 If Step 4 determined DPIA REQUIRED or BORDERLINE, or Step 5 classified High Risk,
-set `pipeline:blocked` immediately and escalate to DPO before any further pipeline steps.
+set status to `Blocked` immediately and escalate to DPO before any further pipeline steps.
 
 ```bash
-# DPIA REQUIRED → immediately set pipeline:blocked before escalation comment
-gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+# DPIA REQUIRED → immediately set Blocked status before escalation comment
+scripts/pipeline/set-status.sh BLOCKED
 ```
 
 ```bash
@@ -371,13 +371,9 @@ gh issue comment $ISSUE_NUMBER \
 **Reason:** [Specific criteria met from Step 4 or Step 5]
 
 **Required action:** A qualified DPO must review this feature before development proceeds.
-The pipeline is blocked until a human removes the \`pipeline:blocked\` label after DPO review.
+The pipeline is blocked — set this issue's Status to \`Architecture\` on the project board to proceed after DPO review.
 
 @$TECH_LEAD — Please arrange DPO review for issue #$ISSUE_NUMBER before approving development."
-
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --add-label "pipeline:blocked"
 ```
 
 ---
@@ -402,22 +398,20 @@ gh issue comment $ISSUE_NUMBER \
   --body "🌿 **Branch created:** \`$BRANCH_NAME\`"
 ```
 
-For CONDITIONAL: also set `pipeline:blocked` and tag `TECH_LEAD` to review mitigations:
+For CONDITIONAL: also set status to `Blocked` and tag `TECH_LEAD` to review mitigations:
 ```bash
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
-  --body "@$TECH_LEAD — Compliance review found CONDITIONAL issues (see mitigations above). Pipeline is blocked pending your review. Remove the \`pipeline:blocked\` label to proceed once mitigations are accepted."
+  --body "@$TECH_LEAD — Compliance review found CONDITIONAL issues (see mitigations above). Pipeline is blocked pending your review. Set this issue's Status to \`Architecture\` on the project board to proceed once mitigations are accepted."
 
-gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+scripts/pipeline/set-status.sh BLOCKED
 ```
 
 ### If BLOCKED:
 
 ```bash
 # No branch created — pipeline stops here
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --add-label "pipeline:blocked"
+scripts/pipeline/set-status.sh BLOCKED
 
 gh issue comment $ISSUE_NUMBER \
   --repo $GITHUB_REPO \
@@ -433,19 +427,13 @@ gh issue comment $ISSUE_NUMBER \
 scripts/pipeline/set-status.sh ARCHITECTURE
 scripts/pipeline/log.sh "EU Compliance" "COMPLIANT — proceeding to Architecture" PASS
 
-# CONDITIONAL → lock status at Legal Review and set pipeline:blocked
-# Pipeline resumes when @TECH_LEAD removes pipeline:blocked after accepting mitigations,
-# at which point manually call: scripts/pipeline/set-status.sh ARCHITECTURE
-scripts/pipeline/set-status.sh LEGAL_REVIEW
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --add-label "pipeline:blocked"
+# CONDITIONAL → set status to Blocked (branch was created; pipeline waits for @TECH_LEAD review)
+# Pipeline resumes when @TECH_LEAD sets Status to Architecture on the project board.
+scripts/pipeline/set-status.sh BLOCKED
 scripts/pipeline/log.sh "EU Compliance" "CONDITIONAL — mitigations required, pipeline blocked pending review" BLOCK
 
-# BLOCKED → set pipeline:blocked (no branch created, no status advance)
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --add-label "pipeline:blocked"
+# BLOCKED → set status to Blocked (no branch created, no status advance)
+scripts/pipeline/set-status.sh BLOCKED
 ```
 
 ---

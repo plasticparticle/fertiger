@@ -225,7 +225,7 @@ if [ "$RETRY_COUNT" -ge 3 ]; then
 Human intervention required. @{TECH_LEAD} please review.
 
 $(list failed tests and unmet ACs)"
-  gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+  scripts/pipeline/set-status.sh BLOCKED
   scripts/pipeline/log.sh "QA Validation" "ESCALATED — 3 failures, human intervention required" FAIL
 
 else

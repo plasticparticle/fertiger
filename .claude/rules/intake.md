@@ -103,14 +103,12 @@ these are answered — no manual re-trigger needed.
 EOF
 )"
 
-# Set blocked label while waiting
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --add-label "pipeline:blocked"
+# Set status to Blocked while waiting
+scripts/pipeline/set-status.sh BLOCKED
 ```
 
 **The watcher detects human replies automatically.** When the author posts a
-reply, the watcher removes `pipeline:blocked` and re-invokes the Intake Agent,
+reply, the watcher sets status back to `Intake` and re-invokes the Intake Agent,
 which then reaches Step 5 via the answered-questions path above.
 
 ## Step 5: Write Requirements Comment
@@ -155,12 +153,6 @@ EOF
 ## Step 6: Update Project Status
 ```bash
 scripts/pipeline/set-status.sh LEGAL_REVIEW
-
-# Remove blocked label if it was set
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --remove-label "pipeline:blocked"
-
 scripts/pipeline/log.sh "Intake" "Complete — requirements posted, handing off to EU Compliance" PASS
 ```
 

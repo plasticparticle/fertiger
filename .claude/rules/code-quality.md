@@ -143,8 +143,8 @@ EOF
 scripts/pipeline/set-status.sh SECURITY_REVIEW
 scripts/pipeline/log.sh "Code Quality" "PASS — handing off to Security Agent" PASS
 
-# FAIL → set pipeline:blocked (developer must fix before pipeline continues)
-gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+# FAIL → set Blocked status (developer must fix before pipeline continues)
+scripts/pipeline/set-status.sh BLOCKED
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
   --body "@{TECH_LEAD} Code quality issues must be resolved before this can proceed to Security Review. See violations listed above."
 scripts/pipeline/log.sh "Code Quality" "FAIL — pipeline blocked, violations listed on issue" FAIL
@@ -296,8 +296,8 @@ scripts/pipeline/log.sh "Security" "PASS — handing off to Git Agent" PASS
 scripts/pipeline/set-status.sh READY_FOR_MERGE
 scripts/pipeline/log.sh "Security" "CONDITIONAL — low/medium findings noted in PR, proceeding" PASS
 
-# BLOCKED → set pipeline:blocked and tag author
-gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --add-label "pipeline:blocked"
+# BLOCKED → set Blocked status and tag author
+scripts/pipeline/set-status.sh BLOCKED
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
   --body "@{TECH_LEAD} Security issues require manual review before this can proceed."
 scripts/pipeline/log.sh "Security" "BLOCKED — critical/high vulnerabilities found, pipeline stopped" FAIL

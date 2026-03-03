@@ -41,8 +41,7 @@ source .claude/config.sh
 
 ## Step 2: Find Ready Issues
 
-Use the pre-built poll script — it checks the project board and label fallback
-in one call and returns structured JSON:
+Use the pre-built poll script — it checks the project board and returns structured JSON:
 
 ```bash
 POLL_RESULT=$(bash .claude/scripts/poll-once.sh)
@@ -97,11 +96,6 @@ gh project item-edit \
   --field-id $STATUS_FIELD_ID \
   --project-id $PROJECT_NODE_ID \
   --single-select-option-id $INTAKE_OPTION_ID
-
-# Remove the trigger label
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --remove-label "pipeline:ready"
 ```
 
 Post an opening comment:
@@ -197,8 +191,8 @@ For each issue in `.intake_resumed[]`:
 ISSUE_NUMBER=<number from .intake_resumed[].number>
 export ISSUE_NUMBER
 
-# Remove pipeline:blocked — the human has answered the intake questions
-gh issue edit $ISSUE_NUMBER --repo $GITHUB_REPO --remove-label "pipeline:blocked"
+# Resume status from Blocked → Intake — the human has answered the intake questions
+scripts/pipeline/set-status.sh INTAKE
 
 # Post a resumption comment so the issue shows the watcher acted
 gh issue comment $ISSUE_NUMBER --repo $GITHUB_REPO \
@@ -229,7 +223,7 @@ POLL_INTERVAL=30 MAX_IDLE_SECONDS=300 bash .claude/scripts/watch.sh
 - `.claude/scripts/poll-once.sh` — single poll, used by watch.sh and as startup check in webhook-watch.sh
 
 ## Error Handling
-If any agent in the pipeline sets `pipeline:blocked` label:
+If any agent in the pipeline sets status to `Blocked`:
 - Do NOT continue to the next stage
 - Send a notification comment tagging the issue author
-- Stop the pipeline for that issue until the label is removed
+- Stop the pipeline for that issue until the status is manually changed back

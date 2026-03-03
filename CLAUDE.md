@@ -72,13 +72,10 @@ exclusively through GitHub Issue comments and labels — no local state files.
 Configure these as options in your GitHub Project's "Status" field:
 `Backlog` | `Ready` | `Intake` | `Legal Review` | `Architecture` |
 `Solution Design` | `Awaiting Approval` | `Approved` | `In Development` | `QA Review` |
-`Code Review` | `Security Review` | `Ready for Merge` | `Done`
+`Code Review` | `Security Review` | `Ready for Merge` | `Blocked` | `Done`
 
 ## GitHub Labels — Required Labels in Repo
 Create these labels in the repo:
-- `pipeline:ready`      — human adds to trigger pipeline
-- `pipeline:blocked`    — agent sets when stuck
-- `pipeline:done`       — pipeline complete
 - `compliance:drift`    — created automatically by `/agent:compliance-audit` when drift is found
 
 ## Agent Rules (modular)
@@ -110,7 +107,7 @@ Reusable scripts live in `scripts/pipeline/`. Full docs: `scripts/pipeline/SCRIP
 - Post output as a structured comment (see each agent's template)
 - Update the issue's Project status field after posting — use `scripts/pipeline/set-status.sh`
 - Never post duplicate comments — check if your section already exists
-- If blocked: add label `pipeline:blocked`, post a BLOCKED comment explaining why
+- If blocked: set status to `Blocked` with `scripts/pipeline/set-status.sh BLOCKED`, post a BLOCKED comment explaining why
 - Use `gh issue comment $ISSUE_NUMBER --body "..."` for all communication
 - **jq + HTML comments:** Never use `contains("<!--")` in jq — the `!` causes a `\!` escape error. Use `test("pipeline-agent:")` instead:
   ```bash

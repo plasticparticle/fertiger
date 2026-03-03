@@ -1,5 +1,5 @@
-Cancel the pipeline for a specific issue: removes pipeline labels, resets project
-status to Backlog, and posts a cancellation comment. Does not delete the feature branch.
+Cancel the pipeline for a specific issue: resets project status to Backlog and posts
+a cancellation comment. Does not delete the feature branch.
 
 Usage: `/pipeline:cancel 42`
 
@@ -19,7 +19,7 @@ gh issue view $ISSUE_NUMBER \
   --json number,title,labels,state
 ```
 
-If the issue is already closed or has `pipeline:done`, print a warning and confirm
+If the issue is already closed or has status `Done`, print a warning and confirm
 with the user before proceeding — cancelling a completed pipeline is unusual.
 
 ---
@@ -58,8 +58,7 @@ gh issue comment $ISSUE_NUMBER \
 **Cancelled at:** $CANCELLED_AT
 **Cancelled by:** human (\`/pipeline:cancel $ISSUE_NUMBER\`)
 
-The pipeline has been manually cancelled. All pipeline labels have been removed
-and the issue status has been reset to **Backlog**.
+The pipeline has been manually cancelled. The issue status has been reset to **Backlog**.
 
 **Agents completed before cancel:** ${COMPLETED_AGENTS:-none}
 
@@ -69,8 +68,7 @@ git push origin --delete $BRANCH_NAME
 git branch -d $BRANCH_NAME
 \`\`\`" || echo "**Feature branch:** None was created.")
 
-To restart the pipeline from the beginning, set the issue status to **Ready** or
-re-add the \`pipeline:ready\` label."
+To restart the pipeline from the beginning, set the issue status to **Ready**."
 ```
 
 ---
@@ -96,11 +94,10 @@ Print a summary:
 🛑  Pipeline cancelled — Issue #$ISSUE_NUMBER
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Labels removed:  pipeline:ready, pipeline:blocked
 Status:          → Backlog
 Branch:          $BRANCH_NAME (not deleted — remove manually if needed)
 Completed agents: $COMPLETED_AGENTS
 
-To restart: set issue status to Ready or add `pipeline:ready` label.
+To restart: set issue status to Ready.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```

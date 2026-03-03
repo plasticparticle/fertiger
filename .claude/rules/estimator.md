@@ -278,4 +278,4 @@ scripts/pipeline/log.sh "Estimator" "Complete — handing off to EU Compliance" 
 - Enterprise timelines are illustrative, advisory, and deadpan — they describe overhead, not delivery commitments
 - Do not recommend prioritisation or ranking — observe and report only
 - Reach classification (ALL/MAJORITY/MINORITY/EDGE CASE) refers to the feature's total user base, not just active users
-- If the intake comment is missing or malformed, set `pipeline:blocked` and post a blocked comment — do not guess requirements
+- If the intake comment is missing or malformed, set status to `Blocked` with `scripts/pipeline/set-status.sh BLOCKED` and post a blocked comment — do not guess requirements

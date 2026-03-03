@@ -141,16 +141,7 @@ gh project item-add $GITHUB_PROJECT_NUMBER \
   --url "https://github.com/$GITHUB_REPO/pull/$PR_NUMBER"
 
 # Update project status to "Done"
-gh project item-edit \
-  --id $PROJECT_ITEM_ID \
-  --field-id $STATUS_FIELD_ID \
-  --project-id $PROJECT_NODE_ID \
-  --single-select-option-id $DONE_OPTION_ID
-
-# Add pipeline:done label
-gh issue edit $ISSUE_NUMBER \
-  --repo $GITHUB_REPO \
-  --add-label "pipeline:done"
+scripts/pipeline/set-status.sh DONE
 scripts/pipeline/log.sh "Git Agent" "Pipeline complete — PR created, issue closed" PASS
 ```
 

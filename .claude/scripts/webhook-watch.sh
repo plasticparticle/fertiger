@@ -151,14 +151,24 @@ while true; do
     echo "[watcher] Alive — $(date -u +"%Y-%m-%dT%H:%M:%SZ") — idle ${IDLE}s / ${MAX_IDLE_SECONDS}s"
     LAST_HEARTBEAT="$NOW"
 
-    # Poll for state-based triggers (Approved status) — not capturable via issue webhooks
+    # Poll for project board status changes — not capturable via issue webhooks
     POLL_RESULT=$("$SCRIPT_DIR/poll-once.sh" 2>/dev/null)
     POLL_EXIT=$?
+    if [ "$POLL_EXIT" -ne 0 ]; then
+      echo "$POLL_RESULT"
+      LAST_ACTIVITY=$(date +%s)
+    fi
+    if [ $((POLL_EXIT & 1)) -ne 0 ]; then
+      READY_COUNT=$(echo "$POLL_RESULT" | jq -r '.ready_count // 0')
+      echo "[watcher] ACTION: $READY_COUNT ready issue(s) — hand off to intake pipeline"
+    fi
     if [ $((POLL_EXIT & 2)) -ne 0 ]; then
       APPROVED_COUNT=$(echo "$POLL_RESULT" | jq -r '.approved_count // 0')
-      echo "$POLL_RESULT"
       echo "[watcher] ACTION: $APPROVED_COUNT approved issue(s) — resume pipeline from QA"
-      LAST_ACTIVITY=$(date +%s)
+    fi
+    if [ $((POLL_EXIT & 4)) -ne 0 ]; then
+      RESUMED_COUNT=$(echo "$POLL_RESULT" | jq -r '.intake_resumed_count // 0')
+      echo "[watcher] ACTION: $RESUMED_COUNT intake-resumed issue(s) — resume intake with clarifications"
     fi
   fi
 
@@ -188,27 +198,8 @@ while true; do
 
       [ -z "$NUMBER" ] && continue
 
-      # ── issues events: label added ────────────────────────────────────────
-      if [ "$EVENT_TYPE" = "issues" ] && [ "$ACTION" = "labeled" ]; then
-        LABEL=$(echo "$PAYLOAD" | jq -r '.label.name // empty' 2>/dev/null || true)
-        [ -z "$LABEL" ] && continue
-
-        if [ "$LABEL" = "pipeline:ready" ]; then
-          echo ""
-          echo "[watcher] Event: issue #$NUMBER labeled pipeline:ready — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          jq -n \
-            --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-            --argjson n  "$NUMBER" \
-            --arg  title "$TITLE" \
-            --arg  url   "$URL" \
-            '{timestamp:$ts, ready_count:1, approved_count:0, intake_resumed_count:0,
-              ready:[{id:null, number:$n, title:$title, url:$url}],
-              approved:[], intake_resumed:[]}'
-          echo "[watcher] ACTION: 1 ready issue(s) — hand off to intake pipeline"
-        fi
-
-      # ── issue_comment events: human replied on a blocked issue ────────────
-      elif [ "$EVENT_TYPE" = "issue_comment" ] && [ "$ACTION" = "created" ]; then
+      # ── issue_comment events: human replied on a Blocked issue ──────────
+      if [ "$EVENT_TYPE" = "issue_comment" ] && [ "$ACTION" = "created" ]; then
         COMMENT_BODY=$(echo "$PAYLOAD" | jq -r '.comment.body // ""' 2>/dev/null || true)
 
         # Skip comments from pipeline agents (they start with <!-- pipeline-agent:)
@@ -216,32 +207,26 @@ while true; do
           '<!-- pipeline-agent:'*) continue ;;
         esac
 
-        # Check pipeline:blocked label directly from the webhook payload —
-        # no extra API call needed.
-        IS_BLOCKED=$(echo "$PAYLOAD" | \
-          jq '[(.issue.labels // [])[].name == "pipeline:blocked"] | any' \
+        # Check if this issue is awaiting intake clarifications: has an
+        # intake-questions comment but no final intake requirements yet.
+        AWAITING_INTAKE=$(gh issue view "$NUMBER" --repo "$GITHUB_REPO" \
+          --json comments 2>/dev/null \
+          | jq '([.comments[].body | test("pipeline-agent:intake-questions")] | any)
+              and (([.comments[].body | test("pipeline-agent:intake[^-]")] | any) | not)' \
           2>/dev/null || echo "false")
 
-        if [ "$IS_BLOCKED" = "true" ]; then
-          # One API call to confirm intake-questions comment exists
-          HAS_Q=$(gh issue view "$NUMBER" --repo "$GITHUB_REPO" \
-            --json comments 2>/dev/null \
-            | jq '[.comments[].body | test("pipeline-agent:intake-questions")] | any' \
-            2>/dev/null || echo "false")
-
-          if [ "$HAS_Q" = "true" ]; then
-            echo ""
-            echo "[watcher] Event: issue #$NUMBER — human replied to intake questions — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            jq -n \
-              --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-              --argjson n  "$NUMBER" \
-              --arg  title "$TITLE" \
-              --arg  url   "$URL" \
-              '{timestamp:$ts, ready_count:0, approved_count:0, intake_resumed_count:1,
-                ready:[], approved:[],
-                intake_resumed:[{id:null, number:$n, title:$title, url:$url}]}'
-            echo "[watcher] ACTION: 1 intake-resumed issue(s) — resume intake with clarifications"
-          fi
+        if [ "$AWAITING_INTAKE" = "true" ]; then
+          echo ""
+          echo "[watcher] Event: issue #$NUMBER — human replied to intake questions — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          jq -n \
+            --arg  ts    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            --argjson n  "$NUMBER" \
+            --arg  title "$TITLE" \
+            --arg  url   "$URL" \
+            '{timestamp:$ts, ready_count:0, approved_count:0, intake_resumed_count:1,
+              ready:[], approved:[],
+              intake_resumed:[{id:null, number:$n, title:$title, url:$url}]}'
+          echo "[watcher] ACTION: 1 intake-resumed issue(s) — resume intake with clarifications"
         fi
       fi
 

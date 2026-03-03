@@ -36,12 +36,12 @@ assert_contains \
   "BLOCKED.*branch\|branch.*BLOCKED\|no branch.*BLOCKED\|pipeline:blocked"
 
 assert_contains \
-  "Rules file sets pipeline:blocked label on BLOCKED verdict" \
+  "Rules file sets Blocked status on BLOCKED verdict" \
   "$RULES_FILE" \
-  "pipeline:blocked"
+  "set-status.sh BLOCKED"
 
 echo ""
-echo "--- AC-007: DPIA REQUIRED → pipeline:blocked + DPO escalation ---"
+echo "--- AC-007: DPIA REQUIRED → Blocked status + DPO escalation ---"
 assert_contains \
   "Rules file contains DPO escalation step" \
   "$RULES_FILE" \
@@ -53,9 +53,9 @@ assert_contains \
   'TECH_LEAD\|\$TECH_LEAD\|@.*TECH_LEAD'
 
 assert_contains \
-  "Rules file sets pipeline:blocked on DPIA REQUIRED" \
+  "Rules file sets Blocked status on DPIA REQUIRED" \
   "$RULES_FILE" \
-  "DPIA.*pipeline:blocked\|pipeline:blocked.*DPIA"
+  "DPIA.*[Bb]locked\|[Bb]locked.*DPIA"
 
 echo ""
 echo "--- REQ-010: Runs after Intake, before Architect (pipeline position) ---"

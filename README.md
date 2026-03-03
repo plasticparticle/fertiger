@@ -82,7 +82,7 @@ The pipeline includes two human checkpoints — because even we think someone sh
       ↓
 [SOLUTION DESIGN] → file-by-file implementation plan
       ↓
-⏸ HUMAN CHECKPOINT  ← add label `pipeline:approved` to continue
+⏸ HUMAN CHECKPOINT  ← set status to `Approved` to continue
       ↓
 [QA]           writes failing tests (TDD)
       ↓
@@ -322,7 +322,7 @@ To use a different log path, set `PIPELINE_LOG_FILE` in `.claude/config.sh`.
 
 ### Resume after human approval
 
-After you add the `pipeline:approved` label to an issue:
+After you set an issue's status to `Approved` on the project board:
 
 ```bash
 claude "/pipeline:resume 42"
@@ -429,7 +429,7 @@ Open bar. Your tab. They did not ask.
 >   simply cannot believe anyone has not yet addressed Article 35 and is not going to let
 >   the minor matter of cost stand in the way of addressing it now
 >
-> The pipeline *will* ask clarifying questions. The pipeline *will* wait for `pipeline:approved`.
+> The pipeline *will* ask clarifying questions. The pipeline *will* wait for `Approved` status.
 > These are the two remaining speed bumps between you and total automation. Cherish them.
 > They are the last two humans in the building.
 >
@@ -469,7 +469,7 @@ The pipeline has two places where it stops and waits for a human. This is not a 
 
 ### Checkpoint 1 — Clarifying Questions
 
-If the Intake Agent finds ambiguities in your issue, it posts a comment tagging you with questions and sets `pipeline:blocked`. Answer in the issue comments. Remove the `pipeline:blocked` label (or have a teammate do it). The pipeline resumes.
+If the Intake Agent finds ambiguities in your issue, it posts a comment tagging you with questions and sets the issue status to `Blocked`. Answer in the issue comments. Set the status back to `Intake` on the project board. The pipeline resumes.
 
 ### Checkpoint 2 — Development Approval
 
@@ -530,10 +530,10 @@ your-project/
 ## What Your Developers Actually Do Now
 
 1. Write a GitHub Issue using the feature request template
-2. Set it to `Ready` on the project board (or add `pipeline:ready` label)
+2. Set it to `Ready` on the project board
 3. Answer any clarifying questions the Intake Agent posts
 4. Review the architecture and implementation plan
-5. Add the `pipeline:approved` label when happy
+5. Set the issue status to `Approved` on the project board when happy
 6. Review the Pull Request when it appears
 
 That's it. The rest is handled by agents who don't take PTO, don't attend standups, and have never once complained about the coffee machine.
@@ -601,10 +601,10 @@ Each agent is just a markdown file with instructions for Claude. To change behav
 A: Not entirely. Someone has to write the GitHub Issues. And approve the pipeline. And review the PR. You've basically become a very well-compensated project manager.
 
 **Q: What if an agent gets stuck?**
-A: It sets the `pipeline:blocked` label and posts a comment explaining why. Check the issue, resolve the blocker, remove the label. The pipeline resumes. Unlike your developers, it will not passive-aggressively "forget" to tell you it's blocked.
+A: It sets the issue status to `Blocked` on the project board and posts a comment explaining why. Check the issue, resolve the blocker, set the status back to the appropriate stage. The pipeline resumes. Unlike your developers, it will not passive-aggressively "forget" to tell you it's blocked.
 
 **Q: What happens if QA fails three times?**
-A: The pipeline escalates to human review (`pipeline:blocked` + QA escalation comment). At this point your developers may be needed. Tell them to look busy beforehand.
+A: The pipeline escalates to human review (status set to `Blocked` + QA escalation comment). At this point your developers may be needed. Tell them to look busy beforehand.
 
 **Q: Is the GDPR check actually legally sufficient?**
 A: No. It's a structured checklist that flags issues. You still need a human lawyer for anything that actually matters. The Legal Agent will remind you of this in its output.

@@ -205,11 +205,10 @@ to detect drift from `$PIPELINE_DOCS_DIR/COMPLIANCE.md`.
 ## Pipeline Control
 
 ### cancel-pipeline.sh
-**Purpose:** Remove all active pipeline labels from an issue and reset its project status to Backlog.
+**Purpose:** Reset an issue's project status to Backlog (cancels the pipeline).
 **Usage:** `scripts/pipeline/cancel-pipeline.sh`
 **Arguments:** none
 **Env required:** `ISSUE_NUMBER` (not in config.sh — must be set manually)
-**Labels removed:** `pipeline:ready`, `pipeline:blocked`
 **Sets status:** `BACKLOG`
 **Used by:** `/pipeline:cancel` command
 

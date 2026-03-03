@@ -17,7 +17,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$ROOT_DIR/.claude/config.sh"
 
 # 1. Project board: items with status "Ready"
-READY_PROJECT=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
+READY_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
   --owner "$GITHUB_PROJECT_OWNER" \
   --format json \
   --limit 50 2>/dev/null \
@@ -28,20 +28,7 @@ READY_PROJECT=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
       url: (.content.url // "")
     }]' 2>/dev/null || echo '[]')
 
-# 2. Label fallback: pipeline:ready
-READY_LABELED=$(gh issue list \
-  --repo "$GITHUB_REPO" \
-  --label "pipeline:ready" \
-  --json number,title,url \
-  --state open 2>/dev/null \
-  | jq '[.[] | {id: null, number: .number, title: .title, url: .url}]' \
-  || echo '[]')
-
-# Merge and deduplicate by issue number
-READY_ISSUES=$(jq -s '(.[0] + .[1]) | unique_by(.number)' \
-  <(echo "$READY_PROJECT") <(echo "$READY_LABELED"))
-
-# 3. Project board: items with status "Approved" (human moved from Awaiting Approval)
+# 2. Project board: items with status "Approved" (human moved from Awaiting Approval)
 APPROVED_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
   --owner "$GITHUB_PROJECT_OWNER" \
   --format json \
@@ -53,23 +40,28 @@ APPROVED_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
       url: (.content.url // "")
     }]' 2>/dev/null || echo '[]')
 
-# 4. Intake-resumed: blocked issues where a human replied to intake-questions
-# For each pipeline:blocked issue that has an intake-questions comment, check
-# whether a non-pipeline comment exists after that questions comment.
+# 3. Intake-resumed: Blocked issues where a human replied to intake-questions
+# Query project board for issues with status "Blocked", then check for a human reply
+# to the intake-questions comment.
 INTAKE_RESUMED='[]'
-BLOCKED_ISSUES=$(gh issue list \
-  --repo "$GITHUB_REPO" \
-  --label "pipeline:blocked" \
-  --json number,title,url \
-  --state open 2>/dev/null || echo '[]')
+BLOCKED_ISSUES=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
+  --owner "$GITHUB_PROJECT_OWNER" \
+  --format json \
+  --limit 50 2>/dev/null \
+  | jq '[.items[] | select(.status == "Blocked" and .content.number != null) | {
+      number: .content.number,
+      title: .title,
+      url: (.content.url // "")
+    }]' 2>/dev/null || echo '[]')
 BLOCKED_N=$(echo "$BLOCKED_ISSUES" | jq 'length')
 b=0
 while [ "$b" -lt "$BLOCKED_N" ]; do
   B_NUM=$(echo "$BLOCKED_ISSUES"   | jq -r ".[$b].number")
-  B_TITLE=$(echo "$BLOCKED_ISSUES" | jq -r ".[$b].title")
+  B_TITLE=$(echo "$BLOCKED_ISSUES" | jq -r ".[$b].title // \"\"")
   B_URL=$(echo "$BLOCKED_ISSUES"   | jq -r ".[$b].url // \"\"")
 
   COMMENTS=$(gh api "repos/$GITHUB_REPO/issues/$B_NUM/comments" 2>/dev/null || echo '[]')
+
 
   # Only process issues that have an intake-questions comment
   HAS_Q=$(echo "$COMMENTS" | \
