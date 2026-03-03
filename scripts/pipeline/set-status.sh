@@ -39,7 +39,14 @@ if [ -z "$OPTION_ID" ]; then
   exit 1
 fi
 
-# Auto-fetch PROJECT_ITEM_ID if not exported
+# Auto-fetch PROJECT_ITEM_ID if not already set — cache to disk so subsequent
+# set-status.sh calls within the same pipeline run skip the extra item-list query.
+PITEM_CACHE="/tmp/fertiger-pitem-${GITHUB_PROJECT_NUMBER}-${ISSUE_NUMBER}"
+
+if [ -z "$PROJECT_ITEM_ID" ] && [ -s "$PITEM_CACHE" ]; then
+  PROJECT_ITEM_ID=$(cat "$PITEM_CACHE")
+fi
+
 if [ -z "$PROJECT_ITEM_ID" ]; then
   PROJECT_ITEM_ID=$(gh project item-list "$GITHUB_PROJECT_NUMBER" \
     --owner "$GITHUB_PROJECT_OWNER" \
@@ -49,6 +56,7 @@ if [ -z "$PROJECT_ITEM_ID" ]; then
     echo "ERROR: Could not find project item for issue #$ISSUE_NUMBER." >&2
     exit 1
   fi
+  printf '%s' "$PROJECT_ITEM_ID" > "$PITEM_CACHE"
   export PROJECT_ITEM_ID
 fi
 

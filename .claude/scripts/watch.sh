@@ -21,7 +21,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-POLL_INTERVAL="${POLL_INTERVAL:-60}"
+POLL_INTERVAL="${POLL_INTERVAL:-120}"
 MAX_IDLE_SECONDS="${MAX_IDLE_SECONDS:-28800}"
 
 source "$ROOT_DIR/.claude/config.sh"

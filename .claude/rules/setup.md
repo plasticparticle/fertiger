@@ -84,6 +84,15 @@ Read the repo identity directly from the git remote — no manual input required
 GITHUB_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
 GITHUB_ORG=$(gh repo view --json owner --jq '.owner.login')
 REPO_NAME=$(gh repo view --json name --jq '.name')
+
+# gh project commands require "@me" for personal accounts, not the login name.
+# Org accounts use their login name. Detect which applies.
+ACCOUNT_TYPE=$(gh api "users/$GITHUB_ORG" --jq '.type' 2>/dev/null || echo "User")
+if [ "$ACCOUNT_TYPE" = "User" ]; then
+  GITHUB_PROJECT_OWNER="@me"
+else
+  GITHUB_PROJECT_OWNER="$GITHUB_ORG"
+fi
 ```
 
 If this fails (not inside a git repo, or remote not set to GitHub), print:
@@ -282,7 +291,7 @@ cat > .claude/config.sh << EOF
 export GITHUB_ORG="$GITHUB_ORG"
 export GITHUB_REPO="$GITHUB_REPO"
 export GITHUB_PROJECT_NUMBER=$GITHUB_PROJECT_NUMBER
-export GITHUB_PROJECT_OWNER="$GITHUB_ORG"
+export GITHUB_PROJECT_OWNER="$GITHUB_PROJECT_OWNER"
 export TECH_LEAD="$TECH_LEAD"
 
 # GitHub Project node IDs (fetched by setup agent)
