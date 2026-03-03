@@ -57,12 +57,33 @@ to post never aborts the agent's primary work. A duplicate guard prevents re-pos
 | Security Register | Document | Running log of security audits and patterns per feature | `$PIPELINE_DOCS_DIR/SECURITY.md` |
 | Pipeline Config | Shell script | GitHub Project node IDs, status option IDs, org/repo config | `.claude/config.sh` (gitignored) |
 | Triage Script | Shell script | Classifies feature complexity as TRIVIAL/STANDARD/COMPLEX before agents start deep analysis | `scripts/pipeline/triage.sh` |
+| Metrics Script | Pipeline script | Reads structured `.jsonl` logs; produces per-agent timing reports and historical run summaries | `scripts/pipeline/metrics.sh` |
+| Structured Observability | Convention | Per-run JSON lines audit trail; 30-day rotation; queryable with jq | `.pipeline-logs/issue-N/<run_id>.jsonl` |
 
 ---
 
 ## Architecture Decision Records
 
 _ADRs are appended here by the Architect Agent on each feature. Most recent first._
+
+### ADR-016: `.pipeline-logs/issue-N/` directory layout with 30-day rotation — Issue #15 (2026-03-03)
+- **Context:** REQ-005 and REQ-007 require structured log files per run at a predictable path, with automatic 30-day rotation.
+- **Decision:** Layout: `.pipeline-logs/issue-N/<run_id>.jsonl`. Rotation runs inside `log.sh` as a background cleanup: `find .pipeline-logs -name "*.jsonl" -mtime +30 -delete 2>/dev/null &`.
+- **Rationale:** Background cleanup (`&`) adds zero latency. Idempotent and harmless per invocation. No cron or separate process required.
+- **Consequences:** `metrics.sh N` lists all `.jsonl` files under `.pipeline-logs/issue-N/` for historical run summaries.
+
+### ADR-015: `run_id` persistence via `.pipeline-logs/issue-N/.current-run-id` sentinel file — Issue #15 (2026-03-03)
+- **Context:** `run_id` must be consistent across many `log.sh` invocations from separate shell processes within one pipeline run.
+- **Decision:** On first `log.sh` call for a given `ISSUE_NUMBER`, write `run_id = issue-N-YYYYMMDD-HHMMSS` to `.pipeline-logs/issue-N/.current-run-id`. All subsequent calls read from this file. `cancel-pipeline.sh` deletes it on cancel.
+- **Rationale:** File-based sentinel is the simplest zero-dependency POSIX coordination mechanism. Consistent with ADR-007 (local state stays local).
+- **Consequences:** `.pipeline-logs/` must be gitignored.
+
+### ADR-014: JSON lines (ndjson) as structured log format — Issue #15 (2026-03-03)
+- **Context:** REQ-002 requires structured, queryable log output. JSON lines chosen over JSON array, CSV, SQLite.
+- **Decision:** One JSON object per line in `.jsonl` files. Each line independently parseable with `jq`.
+- **Rationale:** `printf` line appends are atomic on Linux for lines < 4096 bytes. `jq` can filter without loading the full file. Zero new dependencies.
+- **Consequences:** Consumers read line-by-line. `metrics.sh` uses `jq -s` for aggregation.
+
 
 ### ADR-013: setup.md and pipeline-update.md use stdout-only heartbeat — Issue #7 (2026-03-02)
 - **Context:** `setup.md` and `pipeline-update.md` run interactively with no `$ISSUE_NUMBER`. They cannot post to a GitHub Issue.
