@@ -20,4 +20,12 @@ fi
 # Reset project status to Backlog
 scripts/pipeline/set-status.sh BACKLOG
 
+# Clear the run_id sentinel so a fresh run_id is assigned on the next pipeline run
+LOGS_BASE="${PIPELINE_LOGS_DIR:-.pipeline-logs}"
+SENTINEL="$LOGS_BASE/issue-${ISSUE_NUMBER}/.current-run-id"
+if [ -f "$SENTINEL" ]; then
+  rm -f "$SENTINEL"
+  echo "Run ID sentinel cleared: $SENTINEL"
+fi
+
 echo "Pipeline cancelled for issue #$ISSUE_NUMBER — status reset to Backlog"
