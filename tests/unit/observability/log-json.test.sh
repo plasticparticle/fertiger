@@ -226,7 +226,9 @@ echo ""
 echo "--- No JSON emitted when ISSUE_NUMBER unset ---"
 
 UNSET_LOGS="$TMPDIR_TEST/.pipeline-logs-unset"
-PIPELINE_LOG_FILE="$TMPDIR_TEST/pipeline-unset.log" \
+# Use env -u to explicitly unset ISSUE_NUMBER so inherited env doesn't interfere
+env -u ISSUE_NUMBER \
+  PIPELINE_LOG_FILE="$TMPDIR_TEST/pipeline-unset.log" \
   PIPELINE_LOGS_DIR="$UNSET_LOGS" \
   bash "$REPO_ROOT/scripts/pipeline/log.sh" "UnsetAgent" "no issue" "INFO" 2>/dev/null || true
 
