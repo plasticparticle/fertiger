@@ -144,14 +144,24 @@ The Intake Agent takes over from here.
 
 ## Step 6: Watch for Events
 
-If running in watch mode (`/pipeline:watch`), run the pre-built watcher script.
-It automatically uses webhook mode (event-driven, fires within seconds) when
-`gh webhook forward` and `python3` are available; otherwise falls back to
-60-second polling. The output format is identical in both modes.
+If running in watch mode (`/pipeline:watch`), run the pre-built watcher script
+**in the background** and handle its output when it exits:
 
 ```bash
 bash .claude/scripts/webhook-watch.sh
 ```
+
+**Critical:** The watcher script exits as soon as it finds actionable issues —
+it does NOT keep running. After processing the issues, run the script again to
+resume watching. This restart loop is your responsibility as the Watcher Agent:
+
+```
+run watcher → exits with ACTION lines → process issues → run watcher again → ...
+```
+
+The script automatically uses webhook mode (event-driven, fires within seconds)
+when `gh webhook forward` and `python3` are available; otherwise polls every
+120 seconds. Either way, it exits immediately when it finds something to act on.
 
 The script emits `[watcher] ACTION: ...` lines when issues are found, preceded
 by a structured JSON object (same format as `poll-once.sh` output).

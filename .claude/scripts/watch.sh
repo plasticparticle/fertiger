@@ -61,8 +61,11 @@ while [ "$IDLE_SECONDS" -lt "$MAX_IDLE_SECONDS" ]; do
   if [ "$EXIT_CODE" -eq 0 ]; then
     IDLE_SECONDS=$((IDLE_SECONDS + POLL_INTERVAL))
     echo "[watcher] Nothing actionable. Next check in ${POLL_INTERVAL}s."
+    sleep "$POLL_INTERVAL"
   else
-    IDLE_SECONDS=0  # reset idle counter whenever work is found
+    # Actionable issues found — print ACTION lines and EXIT so Claude can process
+    # them immediately. Claude restarts the watcher after handling each batch.
+    IDLE_SECONDS=0
 
     if [ $((EXIT_CODE & 1)) -ne 0 ]; then
       READY_COUNT=$(echo "$RESULT" | jq -r '.ready_count // 0')
@@ -78,9 +81,9 @@ while [ "$IDLE_SECONDS" -lt "$MAX_IDLE_SECONDS" ]; do
       RESUMED_COUNT=$(echo "$RESULT" | jq -r '.intake_resumed_count // 0')
       echo "[watcher] ACTION: $RESUMED_COUNT intake-resumed issue(s) — resume intake with clarifications"
     fi
-  fi
 
-  sleep "$POLL_INTERVAL"
+    exit "$EXIT_CODE"
+  fi
 done
 
 echo ""

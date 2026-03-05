@@ -139,6 +139,10 @@ if [ $((INITIAL_EXIT & 4)) -ne 0 ]; then
   RESUMED_COUNT=$(echo "$INITIAL_RESULT" | jq -r '.intake_resumed_count // 0')
   echo "[watcher] ACTION: $RESUMED_COUNT intake-resumed issue(s) — resume intake with clarifications"
 fi
+# If actionable, exit so Claude processes immediately and restarts the watcher
+if [ "$INITIAL_EXIT" -ne 0 ]; then
+  exit "$INITIAL_EXIT"
+fi
 echo ""
 
 # ── Event loop ────────────────────────────────────────────────────────────────
@@ -195,6 +199,10 @@ while true; do
     if [ $((POLL_EXIT & 4)) -ne 0 ]; then
       RESUMED_COUNT=$(echo "$POLL_RESULT" | jq -r '.intake_resumed_count // 0')
       echo "[watcher] ACTION: $RESUMED_COUNT intake-resumed issue(s) — resume intake with clarifications"
+    fi
+    # Exit on actionable heartbeat so Claude processes immediately and restarts
+    if [ "$POLL_EXIT" -ne 0 ]; then
+      exit "$POLL_EXIT"
     fi
   fi
 
@@ -253,6 +261,8 @@ while true; do
               ready:[], approved:[],
               intake_resumed:[{id:null, number:$n, title:$title, url:$url}]}'
           echo "[watcher] ACTION: 1 intake-resumed issue(s) — resume intake with clarifications"
+          # Exit so Claude processes immediately and restarts the watcher
+          exit 4
         fi
       fi
 
