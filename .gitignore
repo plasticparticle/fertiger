@@ -57,3 +57,7 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# ─── Pipeline structured logs ─────────────────────────────────────────────────
+# Written by scripts/pipeline/log.sh when ISSUE_NUMBER is set (issue #15)
+.pipeline-logs/

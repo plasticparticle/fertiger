@@ -30,6 +30,7 @@ _Patterns all developers must follow, extracted from past security reviews._
 - All `gh` commands use `--repo $GITHUB_REPO` to scope operations to the correct repository
 - All `gh issue comment` heartbeat calls use `|| true` fire-and-forget to prevent pipeline failures from exposing internal state via error messages
 - jq patterns in agent rules must use `test()` not `contains()` to avoid bash `!` escape issues
+- log.sh JSON escaping uses sed for basic backslash/quote escaping — acceptable for pipeline-authored messages; do not pass user-supplied content as the message argument
 
 ---
 
@@ -51,6 +52,7 @@ _One row per issue processed. Most recent first._
 
 | Issue | Feature | Result | Critical | High | Medium | Low | Date |
 |-------|---------|--------|----------|------|--------|-----|------|
+| #15 | Structured Observability — log.sh JSON + metrics.sh | CONDITIONAL | 0 | 0 | 1 | 0 | 2026-03-05 |
 | #7 | Pipeline Agents — Post Started Heartbeat Comment | PASS | 0 | 0 | 0 | 0 | 2026-03-02 |
 | #5 | New Agent — Business Value, Customer Impact & Complexity Estimator | PASS | 0 | 0 | 0 | 0 | 2026-03-02 |
 | #4 | Pipeline Agents — Pre-Research Triage | PASS | 0 | 0 | 0 | 0 | 2026-02-26 |

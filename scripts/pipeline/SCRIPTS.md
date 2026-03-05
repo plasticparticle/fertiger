@@ -156,6 +156,27 @@ scripts/pipeline/swarm-lock.sh list                               # show all act
 
 ---
 
+## Observability & Metrics
+
+### metrics.sh
+**Purpose:** Show per-agent timing, retry counts, and historical run summaries from
+structured `.jsonl` logs written by `log.sh`.
+**Usage:**
+```bash
+scripts/pipeline/metrics.sh ISSUE_NUMBER              # all runs for an issue
+scripts/pipeline/metrics.sh ISSUE_NUMBER RUN_ID       # per-agent timing for a run
+scripts/pipeline/metrics.sh --history                 # last 10 runs across all issues
+```
+**Arguments:**
+- `ISSUE_NUMBER` — issue number to query
+- `RUN_ID` — optional run identifier (from `.pipeline-logs/issue-N/<run_id>.jsonl`)
+- `--history` — list last 10 runs sorted by recency across all issues
+**Env required:**
+- `PIPELINE_LOGS_DIR` — base log directory (default: `.pipeline-logs`)
+**Used by:** `/pipeline:metrics` command, `/pipeline:report` (Step 3 history section)
+
+---
+
 ## Terminal Progress Logging
 
 ### log.sh

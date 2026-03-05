@@ -42,6 +42,7 @@ _One row per issue processed. Most recent first._
 
 | Issue | Feature | Result | DPIA Required | Notes | Date |
 |-------|---------|--------|---------------|-------|------|
+| #15 | feat: structured observability — per-feature metrics, execution traces, and cost tracking | COMPLIANT | NO | Internal developer tooling; JSON log files + metrics script; no personal data in structured fields; incidental GitHub usernames in messages covered by legitimate interest (Art. 6(1)(f)); 30-day rotation satisfies Art. 5(1)(e); EU AI Act Minimal Risk | 2026-03-03 |
 | #7 | Pipeline Agents — Post Started Heartbeat Comment at Beginning of Each Agent Run | COMPLIANT | NO | Pure internal developer observability instrumentation; modifies .claude/rules/*.md files only; no personal data processed; no regulations triggered; zero DPIA criteria met; EU AI Act Minimal Risk (Recital 12 / Art. 3(1) scope exclusion) | 2026-03-02 |
 | #5 | New Agent — Business Value, Customer Impact & Complexity Estimator | COMPLIANT | NO | Internal developer pipeline tooling; reads GitHub issue requirements (not personal data); produces business assessments for human reviewers; EU AI Act Minimal Risk (Recital 12); no DPIA criteria met | 2026-03-02 |
 | #4 | Pipeline Agents — Pre-Research Triage | COMPLIANT | NO | Internal developer tooling; deterministic keyword matching is ephemeral; no personal data processed; EU AI Act Minimal Risk (Recital 12) | 2026-02-26 |

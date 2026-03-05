@@ -87,3 +87,29 @@ For details on a specific issue: /pipeline:status <number>
 - **Awaiting human**: issues with status `Awaiting Approval`
 - **Blocked**: issues with status `Blocked`
 - **Total**: all issues shown in the table
+
+## Step 3: Show Run History (last 10 completed runs)
+
+After the live dashboard, print a historical summary of the last 10 pipeline
+runs using the structured log files written by `log.sh` (issue #15).
+
+```bash
+source .claude/config.sh
+
+# Check whether the pipeline-logs directory has any data yet
+if [ -d ".pipeline-logs" ] && find ".pipeline-logs" -name "*.jsonl" -quit 2>/dev/null; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📊 Recent Run History"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  bash scripts/pipeline/metrics.sh --history
+else
+  echo ""
+  echo "  (No structured run history yet — runs will appear here once the pipeline"
+  echo "   has executed with the observability update from issue #15.)"
+fi
+```
+
+The metrics command reads `.pipeline-logs/` and prints each run with its
+run ID, issue number, outcome (✅ PASS / ❌ FAIL), and total duration.
+For per-agent timing of a specific run: `scripts/pipeline/metrics.sh N RUN_ID`.
