@@ -361,6 +361,33 @@ claude "/agent:qa-validate 42"
 claude "/pipeline:report"
 ```
 
+This also shows the last 10 completed runs with their outcome and duration (once `.pipeline-logs/` has data).
+
+### View per-agent timing and run history
+
+```bash
+claude "/pipeline:metrics 42"           # all runs for issue 42
+claude "/pipeline:metrics 42 RUN_ID"    # per-agent timing for a specific run
+claude "/pipeline:metrics --history"    # last 10 runs across all issues
+```
+
+Structured timing data is written to `.pipeline-logs/issue-N/<run_id>.jsonl` as each agent
+runs. The run ID format is `issue-N-YYYYMMDD-HHMMSS`. You can also query the data directly:
+
+```bash
+scripts/pipeline/metrics.sh --history
+scripts/pipeline/metrics.sh 42
+```
+
+### View pipeline costs across features
+
+```bash
+claude "/pipeline:cost-report"
+```
+
+Aggregates the cost summary comments posted by the Git Agent at the end of each pipeline run.
+Shows total tokens and estimated USD cost per feature, with a grand total across all completed issues.
+
 ### Update the pipeline framework
 
 Pull the latest agent rules, scripts, and commands from the fertiger upstream without
@@ -489,7 +516,9 @@ your-project/
 │   │   ├── start.md           ← /pipeline:start
 │   │   ├── status.md          ← /pipeline:status
 │   │   ├── resume.md          ← /pipeline:resume
-│   │   ├── report.md          ← /pipeline:report
+│   │   ├── report.md          ← /pipeline:report (includes run history)
+│   │   ├── metrics.md         ← /pipeline:metrics (per-agent timing + run history)
+│   │   ├── cost-report.md     ← /pipeline:cost-report (token costs per feature)
 │   │   ├── retry-dev.md       ← /pipeline:retry-dev
 │   │   ├── cancel.md          ← /pipeline:cancel  ← halt pipeline, reset to Backlog
 │   │   └── update.md          ← /pipeline:update  ← pull latest framework files
@@ -515,8 +544,14 @@ your-project/
 │   ├── swarm-lock.sh          ← file ownership for parallel dev agents
 │   ├── check-deps.sh          ← check for missing file dependencies
 │   ├── triage.sh              ← classify issue complexity
+│   ├── log.sh                 ← agent logging (human-readable + JSON to .pipeline-logs/)
+│   ├── metrics.sh             ← query .pipeline-logs/ for timing and run history
+│   ├── cost-report.sh         ← aggregate cost summaries from GitHub issue comments
 │   ├── cancel-pipeline.sh     ← remove labels, reset status to Backlog
 │   └── SCRIPTS.md             ← script registry (check here before writing bash)
+├── .pipeline-logs/            ← structured JSON logs (gitignored, local only)
+│   └── issue-N/
+│       └── <run_id>.jsonl     ← one JSON line per agent log call, per pipeline run
 ├── docs/
 │   ├── ARCHITECTURE.md        ← blank template (populated by Architect Agent per feature)
 │   ├── COMPLIANCE.md          ← blank template (populated by EU Compliance Agent per feature)
