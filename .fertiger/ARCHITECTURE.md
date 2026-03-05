@@ -59,12 +59,44 @@ to post never aborts the agent's primary work. A duplicate guard prevents re-pos
 | Triage Script | Shell script | Classifies feature complexity as TRIVIAL/STANDARD/COMPLEX before agents start deep analysis | `scripts/pipeline/triage.sh` |
 | Metrics Script | Pipeline script | Reads structured `.jsonl` logs; produces per-agent timing reports and historical run summaries | `scripts/pipeline/metrics.sh` |
 | Structured Observability | Convention | Per-run JSON lines audit trail; 30-day rotation; queryable with jq | `.pipeline-logs/issue-N/<run_id>.jsonl` |
+| Docs Lock Script | Pipeline script | Advisory file lock for shared docs (COMPLIANCE.md, ARCHITECTURE.md, SECURITY.md) across concurrent pipeline runs | `scripts/pipeline/docs-lock.sh` |
+| Docs Lock Registry Issue | GitHub Issue | Persistent issue used as the comment anchor for all docs lock state; number stored as `DOCS_LOCK_ISSUE` in config.sh | GitHub Issue (created by setup agent) |
 
 ---
 
 ## Architecture Decision Records
 
 _ADRs are appended here by the Architect Agent on each feature. Most recent first._
+
+### ADR-021: Conflict-marker detection extends scan-compliance.sh — Issue #16 (2026-03-05)
+- **Context:** REQ-006 / AC-006 requires detection of unresolved Git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`) in docs files. The compliance audit agent already runs `scan-compliance.sh` as its scanning step.
+- **Decision:** Add a new `=== CONFLICT_MARKERS ===` section to `scan-compliance.sh` output. The section scans `COMPLIANCE.md`, `ARCHITECTURE.md`, and `SECURITY.md` for conflict marker patterns and emits file:line pairs. The compliance audit agent rules check this section before proceeding — conflict markers are a hard stop reported before any column-by-column drift analysis.
+- **Rationale:** Extending the existing scanner avoids a new script and keeps all docs-file inspection in one place. Adding a new script would require updating three files (script + SCRIPTS.md + rules); extending `scan-compliance.sh` touches one script and one rules file.
+- **Consequences:** `scan-compliance.sh` now also scans the docs files themselves for conflict markers. The conflict-marker check appears first in output order.
+
+### ADR-020: git pull --rebase before staging docs changes — Issue #16 (2026-03-05)
+- **Context:** REQ-005 requires docs file writes to incorporate concurrent changes from `main` before committing. Without a rebase, a feature branch created hours ago overwrites rows added by a pipeline run that completed in the interim.
+- **Decision:** Each agent rules file that writes a docs file executes `git pull --rebase origin main` *after* acquiring the docs lock and *before* staging and committing. If rebase produces a conflict on the docs file, the agent aborts (`git rebase --abort`), releases the lock, sets status to Blocked, and posts a clear error comment.
+- **Rationale:** Rebase (not merge) preserves a clean linear history. Running it after lock acquisition ensures no concurrent write can land between the rebase and the commit. A conflict after lock acquisition indicates a protocol bug requiring human review.
+- **Consequences:** Lock is always released on failure (acquire → rebase → write → commit → push → release). Agents must handle non-zero rebase exit as a Blocked condition.
+
+### ADR-019: docs-lock.sh exposes acquire/release/check/list (claim+verify encapsulated) — Issue #16 (2026-03-05)
+- **Context:** REQ-004 requires a configurable timeout (default 10 minutes). Three agent rules files must acquire and release docs locks. `swarm-lock.sh` exposes claim/verify as separate steps requiring agents to implement the polling loop. Replicating that loop across three rules files creates drift risk.
+- **Decision:** `docs-lock.sh` exposes four user-facing commands: `acquire <agent> <issue_number> <file-path>`, `release <agent> <issue_number>`, `check <file-path>`, `list`. The `acquire` command encapsulates the claim + polling-verify loop internally, sleeping 5 seconds between attempts until CONFIRMED or `DOCS_LOCK_TIMEOUT_SECONDS` (default 600) elapses. On timeout, exits 1 and prints the current lock holder. The calling agent handles exit 1 by posting a Blocked comment.
+- **Rationale:** Encapsulating the polling loop in the script prevents three copies of the same bash loop appearing in three rules files. The higher-level `acquire`/`release` API is simpler than the manual claim/verify split and sufficient for the docs-lock use case.
+- **Consequences:** `docs-lock.sh` claim/verify are internal functions, not user-facing commands. Testing acquires and releases via the public `acquire`/`release` interface.
+
+### ADR-018: Lock scope is the file path; marker encodes agent + issue number — Issue #16 (2026-03-05)
+- **Context:** `swarm-lock.sh` is scoped to a single `$ISSUE_NUMBER`: each agent claims specific files but all claims live within one issue's comments. Docs locks must arbitrate across issues, so the scope discriminator must be the *file path* itself.
+- **Decision:** Each `docs-lock.sh` claim comment body encodes the locked file path as `LOCKED_FILE: <path>` and uses the marker `<!-- docs-lock:<AGENT_NAME>-issue-<ISSUE_NUMBER> -->` to uniquely identify the lock holder across concurrent issues. Timestamp arbitration is identical to `swarm-lock.sh`: most recent `TIMESTAMP:` wins; comment ID is the tiebreaker.
+- **Rationale:** File-path scope directly maps to the contention resource. The compound marker (agent + issue) prevents collisions between agents from different issues with the same agent name. Timestamp arbitration is proven correct by the swarm-lock test suite.
+- **Consequences:** `docs-lock.sh check <file-path>` fetches all claim comments from the lock-registry issue and returns the winner for that specific file path. Release deletes only the comment matching the calling agent's compound marker.
+
+### ADR-017: Dedicated lock-registry issue as the comment anchor for cross-issue docs locks — Issue #16 (2026-03-05)
+- **Context:** `swarm-lock.sh` stores claim comments on the feature issue (`$ISSUE_NUMBER`). Docs locks must span multiple concurrent feature issues simultaneously — a lock held by issue #20 must be visible to issue #21. Using the feature issue as the anchor makes cross-issue visibility impossible.
+- **Decision:** Create a dedicated, permanent **lock-registry issue** (title: "fertiger: pipeline docs lock registry"). All `docs-lock.sh` claim comments are posted to this single issue regardless of which feature issue the writing agent belongs to. The registry issue number is stored as `DOCS_LOCK_ISSUE` in `.claude/config.sh`. The setup agent is updated to create this issue and write `DOCS_LOCK_ISSUE` to config.sh.
+- **Rationale:** A single shared coordination point guarantees all agents see all competing claims. Consistent with ADR-007 (lock state in GitHub Issue comments, no local files). The setup agent already provisions infrastructure (labels, project, config) — adding the registry issue follows the same pattern.
+- **Consequences:** `docs-lock.sh` reads `DOCS_LOCK_ISSUE` (not `ISSUE_NUMBER`) for all API calls. `docs-lock.sh` validates `DOCS_LOCK_ISSUE` is non-empty at startup and prints a diagnostic if not. The lock-registry issue is write-only infrastructure and must not be used for other purposes.
 
 ### ADR-016: `.pipeline-logs/issue-N/` directory layout with 30-day rotation — Issue #15 (2026-03-03)
 - **Context:** REQ-005 and REQ-007 require structured log files per run at a predictable path, with automatic 30-day rotation.
